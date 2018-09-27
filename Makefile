@@ -51,7 +51,7 @@ clean-test: ## remove test and coverage artifacts
 	rm -fr .pytest_cache
 
 lint: ## check style with flake8
-	flake8 fast_plotter tests
+	flake8 fast_plotter --max-line-length=120 --ignore=E402
 
 test: ## run tests quickly with the default Python
 	py.test
@@ -86,3 +86,6 @@ dist: clean ## builds source and wheel package
 
 install: clean ## install the package to the active Python's site-packages
 	python setup.py install
+
+install-dev: clean
+	python setup.py develop
