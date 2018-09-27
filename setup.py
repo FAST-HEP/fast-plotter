@@ -15,7 +15,7 @@ requirements = ['Click>=6.0', ]
 
 setup_requirements = ['pytest-runner', ]
 
-test_requirements = ['pytest', ]
+test_requirements = ['pytest', 'flake8']
 
 setup(
     author="F.A.S.T",

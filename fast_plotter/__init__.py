@@ -8,9 +8,6 @@ __version__ = '0.1.0'
 
 
 from __future__ import print_function
-import logging
-logging.getLogger(__name__).setLevel(logging.INFO)
-
 
 
 def keys(df, value_cols=["n", "nvar"]):
