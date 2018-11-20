@@ -28,7 +28,7 @@ def plot_all(df, project_1d=True, project_2d=True, data="data", dataset_col="dat
 
 
 def plot_1d_many(df, data="data", dataset_col="dataset", plot_sims="stack", plot_data="sum",
-                 yscale="linear", kind_data="scatter", kind_sims="line", scale_sims=None, summary="ratio"):
+                 yscale="linear", kind_data="scatter", kind_sims="fill", scale_sims=None, summary="ratio"):
     df = utils.convert_intervals(df, to="mid")
     in_df_data, in_df_sims = utils.split_data_sims(df, data_labels=data, dataset_level=dataset_col)
     if scale_sims is not None:
@@ -47,22 +47,24 @@ def plot_1d_many(df, data="data", dataset_col="dataset", plot_sims="stack", plot
     fig, ax = plt.subplots(2, 1, gridspec_kw={"height_ratios": (3, 1)})
     main_ax, summary_ax = ax
 
-    if kind_sims == "scatter":
-        df_sims.reset_index().plot.scatter(x=x_axis, y="sumw", yerr="err", color="k", label="Monte Carlo", ax=main_ax)
-    elif kind_sims == "line":
-        df_sims["sumw"].unstack(dataset_col).plot.line(drawstyle="steps-mid", ax=main_ax)
-    else:
-        raise RuntimeError("Unknown value for kind_sims, '{}'".format(kind_sims))
+    def _actually_plot(df, kind, label, ax):
+        if kind == "scatter":
+            df.reset_index().plot.scatter(x=x_axis, y="sumw", yerr="err", color="k", label=label, ax=ax)
+        elif kind == "line":
+            df["sumw"].unstack(dataset_col).plot.line(drawstyle="steps-mid", ax=ax)
+        elif kind == "fill":
+            def fill_coll(col, **kwargs):
+                ax.fill_between(x=col.index.values, y1=col.values, label=col.name, **kwargs)
+            df["sumw"].unstack(dataset_col).apply(fill_coll, axis=0, step="mid")
+        else:
+            raise RuntimeError("Unknown value for 'kind', '{}'".format(kind))
 
-    if kind_data == "scatter":
-        df_data.reset_index().plot.scatter(x=x_axis, y="sumw", yerr="err", color="k", label="data", ax=main_ax)
-    elif kind_data == "line":
-        df_data["sumw"].unstack(dataset_col).plot.line(drawstyle="steps-mid", ax=main_ax)
-    else:
-        raise RuntimeError("Unknown value for kind_data, '{}'".format(kind_data))
+    _actually_plot(df_sims, kind=kind_sims, label="Monte Carlo", ax=main_ax)
+    _actually_plot(df_data, kind=kind_data, label="Data", ax=main_ax)
 
     main_ax.grid(True)
     main_ax.set_yscale(yscale)
+    main_ax.legend()
 
     if summary == "ratio":
         summed_data = _merge_datasets(in_df_data, "sum", dataset_col=dataset_col)
@@ -101,8 +103,8 @@ def plot_ratio(x_axis, data, sims, ax):
     d, d_err_sq = data.sumw, data.sumw2
     s_sq = s * s
     d_sq = d * d
-    ratio["sumw"] = d / s
+    ratio["Data / MC"] = d / s
     ratio["err"] = (((1 - 2 * d / s) * d_err_sq + d_sq * s_err_sq / s_sq) / s_sq).abs()
-    ratio.reset_index().plot.scatter(x=x_axis, y="sumw", yerr="err", ax=ax)
+    ratio.reset_index().plot.scatter(x=x_axis, y="Data / MC", yerr="err", ax=ax)
     ax.set_ylim([0., 2])
     ax.grid(True)
