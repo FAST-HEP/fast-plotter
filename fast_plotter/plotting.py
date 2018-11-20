@@ -10,7 +10,7 @@ def plot_all(df, project_1d=True, project_2d=True, data="data", dataset_col="dat
     dimensions = utils.binning_vars(df)
 
     if len(dimensions) == 1:
-        figures[(None, None )] = plot_1d(df, yscale=yscale)
+        figures[(("yscale", yscale),)] = plot_1d(df, yscale=yscale)
 
     if dataset_col in dimensions:
         dimensions = tuple(dim for dim in dimensions if dim != dataset_col)
@@ -18,8 +18,8 @@ def plot_all(df, project_1d=True, project_2d=True, data="data", dataset_col="dat
     if project_1d and len(dimensions) >= 1:
         for dim in dimensions:
             projected = df.groupby(level=(dim, dataset_col)).sum()
-            utils.calculate_error(projected)
-            figures[(("project", dim),)] = plot_1d_many(projected, data=data, dataset_col=dataset_col, yscale=yscale)
+            plot = plot_1d_many(projected, data=data, dataset_col=dataset_col, yscale=yscale, scale_sims=scale_sims)
+            figures[(("project", dim), ("yscale", yscale))] = plot
 
     if project_2d and len(dimensions) > 2:
         logger.warn("project_2d is not yet implemented")
@@ -27,14 +27,15 @@ def plot_all(df, project_1d=True, project_2d=True, data="data", dataset_col="dat
     return figures
 
 
-def plot_1d_many(df, data="data", dataset_col="dataset", plot_sims="stack", plot_data="sum", yscale="linear", kind_data="scatter", kind_sims="line", scale_sims=None):
+def plot_1d_many(df, data="data", dataset_col="dataset", plot_sims="stack", plot_data="sum",
+                 yscale="linear", kind_data="scatter", kind_sims="line", scale_sims=None, summary="ratio"):
     df = utils.convert_intervals(df, to="mid")
-    df_data, df_sims = utils.split_data_sims(df, data_labels=data, dataset_level=dataset_col)
+    in_df_data, in_df_sims = utils.split_data_sims(df, data_labels=data, dataset_level=dataset_col)
     if scale_sims is not None:
-        df_sims = scale_sims * df_sims.copy()
+        in_df_sims *= scale_sims
 
-    df_sims = _merge_datasets(df_sims, plot_sims, "plot_sims", dataset_col)
-    df_data = _merge_datasets(df_data, plot_data, "plot_data", dataset_col)
+    df_sims = _merge_datasets(in_df_sims, plot_sims, dataset_col, param_name="plot_sims")
+    df_data = _merge_datasets(in_df_data, plot_data, dataset_col, param_name="plot_data")
 
     x_axis = [col for col in df.index.names if col != dataset_col]
     if len(x_axis) > 1:
@@ -43,33 +44,43 @@ def plot_1d_many(df, data="data", dataset_col="dataset", plot_sims="stack", plot
         raise RuntimeError("Too few dimensions to multiple 1D graphs, use plot_1d instead")
     x_axis = x_axis[0]
 
-    fig, ax = plt.subplots(1)
+    fig, ax = plt.subplots(2, 1, gridspec_kw={"height_ratios": (3, 1)})
+    main_ax, summary_ax = ax
 
     if kind_sims == "scatter":
-        df_sims.reset_index().plot.scatter(x=x_axis, y="sumw", yerr="err", color="k", label="Monte Carlo", ax=ax)
+        df_sims.reset_index().plot.scatter(x=x_axis, y="sumw", yerr="err", color="k", label="Monte Carlo", ax=main_ax)
     elif kind_sims == "line":
-        df_sims["sumw"].unstack(dataset_col).plot.line(drawstyle="steps-mid", ax=ax)
+        df_sims["sumw"].unstack(dataset_col).plot.line(drawstyle="steps-mid", ax=main_ax)
     else:
         raise RuntimeError("Unknown value for kind_sims, '{}'".format(kind_sims))
 
     if kind_data == "scatter":
-        df_data.reset_index().plot.scatter(x=x_axis, y="sumw", yerr="err", color="k", label="data", ax=ax)
+        df_data.reset_index().plot.scatter(x=x_axis, y="sumw", yerr="err", color="k", label="data", ax=main_ax)
     elif kind_data == "line":
-        df_data["sumw"].unstack(dataset_col).plot.line(drawstyle="steps-mid", ax=ax)
+        df_data["sumw"].unstack(dataset_col).plot.line(drawstyle="steps-mid", ax=main_ax)
     else:
         raise RuntimeError("Unknown value for kind_data, '{}'".format(kind_data))
 
-    ax.grid(True)
-    ax.set_yscale(yscale)
+    main_ax.grid(True)
+    main_ax.set_yscale(yscale)
+
+    if summary == "ratio":
+        summed_data = _merge_datasets(in_df_data, "sum", dataset_col=dataset_col)
+        summed_sims = _merge_datasets(in_df_sims, "sum", dataset_col=dataset_col)
+        plot_ratio(x_axis, summed_data, summed_sims, ax=summary_ax)
+    else:
+        raise RuntimeError("Unknown value for summary, '{}'".format(kind_data))
     return fig
 
 
 
-def _merge_datasets(df, style, param_name, dataset_col):
+def _merge_datasets(df, style, dataset_col, param_name="_merge_datasets"):
     if style == "stack":
+        utils.calculate_error(df)
         df = utils.stack_datasets(df, dataset_level=dataset_col)
     elif style == "sum":
         df = utils.sum_over_datasets(df, dataset_level=dataset_col)
+        utils.calculate_error(df)
     elif style:
         msg = "'{}' must be either 'sum', 'stack' or None. Got {}"
         raise RuntimeError(msg.format(param_name, style))
@@ -82,3 +93,16 @@ def plot_1d(df, kind="line", yscale="lin"):
     plt.grid(True)
     plt.yscale(yscale)
     return fig
+
+
+def plot_ratio(x_axis, data, sims, ax):
+    ratio = data.copy()
+    s, s_err_sq = sims.sumw, sims.sumw2
+    d, d_err_sq = data.sumw, data.sumw2
+    s_sq = s * s
+    d_sq = d * d
+    ratio["sumw"] = d / s
+    ratio["err"] = (((1 - 2 * d / s) * d_err_sq + d_sq * s_err_sq / s_sq) / s_sq).abs()
+    ratio.reset_index().plot.scatter(x=x_axis, y="sumw", yerr="err", ax=ax)
+    ax.set_ylim([0., 2])
+    ax.grid(True)

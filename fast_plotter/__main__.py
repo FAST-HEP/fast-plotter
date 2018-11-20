@@ -28,10 +28,12 @@ def arg_parser(args=None):
                         help="File extension for images")
     parser.add_argument("-w", "--weights", default=[], type=lambda x: x.split(","),
                         help="comma-separated list of weight schemes to plot things for")
-    parser.add_argument("-d", "--data", default="data", 
+    parser.add_argument("-d", "--data", default="data",
                         help="Regular expression to identify real data datasets from their name")
-    parser.add_argument("-l", "--lumi", default=None, 
+    parser.add_argument("-l", "--lumi", default=None, type=float,
                         help="Scale the MC yields by this lumi")
+    parser.add_argument("-y", "--yscale", default="log", choices=["log", "linear"],
+                        help="Use this scale for the y-axis")
     return parser
 
 
@@ -58,7 +60,8 @@ def process_one_file(infile, args):
             for col in df_filtered.columns:
                 df_filtered[col][isnull[col]] = df["n"][isnull[col]]
         df_filtered.columns = [n.replace(weight + ":", "") for n in df_filtered.columns]
-        plots = plot_all(df_filtered, infile + "__" + weight, data=args.data, scale_sims=args.lumi)
+        plots = plot_all(df_filtered, infile + "__" + weight, data=args.data,
+                         scale_sims=args.lumi, yscale=args.yscale)
         save_plots(infile, weight, plots, args.outdir, args.extension)
 
 
