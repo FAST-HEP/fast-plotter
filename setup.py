@@ -11,7 +11,7 @@ with open('README.rst') as readme_file:
 with open('HISTORY.rst') as history_file:
     history = history_file.read()
 
-requirements = ['Click>=6.0', ]
+requirements = ['matplotlib==2', 'pandas']
 
 setup_requirements = ['pytest-runner', ]
 
@@ -36,6 +36,7 @@ setup(
     description="F.A.S.T. plotter package",
     entry_points={
         'console_scripts': [
+            'fast_plotter=fast_plotter.__main__:main',
         ],
     },
     install_requires=requirements,
