@@ -49,7 +49,9 @@ def convert_intervals(df, to="mid", level=[], column=[]):
 def convert_intervals_level(df, to="mid", select=[]):
     def _convert_interval_index(index, to):
         if isinstance(index, pd.IntervalIndex):
-            return getattr(index, to)
+            converted = getattr(index, to)
+            converted.name = index.name
+            return converted
         return index
 
     if not isinstance(df.index, pd.MultiIndex):
