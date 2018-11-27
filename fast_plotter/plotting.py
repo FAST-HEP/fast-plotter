@@ -55,7 +55,7 @@ def plot_1d_many(df, data="data", dataset_col="dataset", plot_sims="stack", plot
         elif kind == "fill":
             def fill_coll(col, **kwargs):
                 ax.fill_between(x=col.index.values, y1=col.values, label=col.name, **kwargs)
-            df["sumw"].unstack(dataset_col).apply(fill_coll, axis=0, step="mid")
+            df["sumw"].unstack(dataset_col).iloc[:, ::-1].apply(fill_coll, axis=0, step="mid")
         else:
             raise RuntimeError("Unknown value for 'kind', '{}'".format(kind))
 
@@ -64,12 +64,14 @@ def plot_1d_many(df, data="data", dataset_col="dataset", plot_sims="stack", plot
 
     main_ax.grid(True)
     main_ax.set_yscale(yscale)
+    main_ax.set_xlabel("")
     main_ax.legend()
 
     if summary == "ratio":
         summed_data = _merge_datasets(in_df_data, "sum", dataset_col=dataset_col)
         summed_sims = _merge_datasets(in_df_sims, "sum", dataset_col=dataset_col)
         plot_ratio(x_axis, summed_data, summed_sims, ax=summary_ax)
+        summary_ax.set_xlim(left=main_ax.axis()[0], right=main_ax.axis()[1])
     else:
         raise RuntimeError("Unknown value for summary, '{}'".format(kind_data))
     return fig
