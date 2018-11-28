@@ -6,7 +6,7 @@ from .interval_from_str import interval_from_string, convert_intervals
 
 
 def decipher_filename(filename):
-    decipher = re.compile(r"tbl_(?P<binning>.*?)(|--(?P<weights>.*))\.csv")
+    decipher = re.compile(r"tbl_(?P<binning>.*?)(?P<weights>--.*|)\.csv")
     groups = decipher.match(os.path.basename(filename))
 
     binning = groups.group("binning").split(".")

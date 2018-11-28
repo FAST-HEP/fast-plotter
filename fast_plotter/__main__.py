@@ -53,13 +53,16 @@ def process_one_file(infile, args):
         if args.weights and weight not in args.weights:
             continue
         if weight == "n":
-            continue
-        df_filtered = df.filter(like=weight, axis="columns").copy()
-        if "n" in df.columns:
-            isnull = df_filtered.isnull()
-            for col in df_filtered.columns:
-                df_filtered[col][isnull[col]] = df["n"][isnull[col]]
-        df_filtered.columns = [n.replace(weight + ":", "") for n in df_filtered.columns]
+            df_filtered = df.filter(weight, axis="columns").copy()
+            df_filtered.rename({weight: "sumw"}, axis="columns", inplace=True)
+            df_filtered["sumw2"] = df_filtered.sumw
+        else:
+            df_filtered = df.filter(like=weight, axis="columns").copy()
+            if "n" in df.columns:
+                isnull = df_filtered.isnull()
+                for col in df_filtered.columns:
+                    df_filtered[col][isnull[col]] = df["n"][isnull[col]]
+            df_filtered.columns = [n.replace(weight + ":", "") for n in df_filtered.columns]
         plots = plot_all(df_filtered, infile + "__" + weight, data=args.data,
                          scale_sims=args.lumi, yscale=args.yscale)
         save_plots(infile, weight, plots, args.outdir, args.extension)
