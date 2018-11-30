@@ -30,6 +30,10 @@ def arg_parser(args=None):
                         help="comma-separated list of weight schemes to plot things for")
     parser.add_argument("-d", "--data", default="data",
                         help="Regular expression to identify real data datasets from their name")
+    parser.add_argument("-s", "--signal", default="signal",
+                        help="Regular expression to identify signal MC datasets from their name")
+    parser.add_argument("--dataset-col", default="dataset",
+                        help="Name of column to be used to define multiple-lines for 1D plots")
     parser.add_argument("-l", "--lumi", default=None, type=float,
                         help="Scale the MC yields by this lumi")
     parser.add_argument("-y", "--yscale", default="log", choices=["log", "linear"],
@@ -63,8 +67,8 @@ def process_one_file(infile, args):
                 for col in df_filtered.columns:
                     df_filtered[col][isnull[col]] = df["n"][isnull[col]]
             df_filtered.columns = [n.replace(weight + ":", "") for n in df_filtered.columns]
-        plots = plot_all(df_filtered, infile + "__" + weight, data=args.data,
-                         scale_sims=args.lumi, yscale=args.yscale)
+        plots = plot_all(df_filtered, infile + "__" + weight, dataset_col=args.dataset_col,
+                         data=args.data, signal=args.signal, scale_sims=args.lumi, yscale=args.yscale)
         save_plots(infile, weight, plots, args.outdir, args.extension)
 
 
