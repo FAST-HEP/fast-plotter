@@ -77,11 +77,12 @@ def save_plots(infile, weight, plots, outdir, extension):
     kernel = "plot_" + ".".join(binning)
     kernel += "--" + weight
     kernel = os.path.join(outdir, kernel)
-    for properties, plot in plots.items():
+    for properties, (main, ratio) in plots.items():
         insert = "-".join("%s_%s" % prop for prop in properties)
         path = kernel + "--" + insert
         path += "." + extension
         logger.info("Saving plot: " + path)
+        plot = main.get_figure()
         plot.savefig(path)
         matplotlib.pyplot.close(plot)
 
