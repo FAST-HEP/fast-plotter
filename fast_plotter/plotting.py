@@ -53,11 +53,12 @@ def plot_1d_many(df, prefix="", data="data", signal=None, dataset_col="dataset",
     else:
         in_df_signal = None
 
-    if summary and (in_df_data is None or in_df_sims is None):
+    if in_df_data is None or in_df_sims is None:
         summary = None
+    if not summary:
         fig, main_ax = plt.subplots(1, 1)
     else:
-        fig, ax = plt.subplots(2, 1, gridspec_kw={"height_ratios": (3,1)})
+        fig, ax = plt.subplots(2, 1, gridspec_kw={"height_ratios": (3, 1)})
         main_ax, summary_ax = ax
 
     x_axis = [col for col in df.index.names if col != dataset_col]

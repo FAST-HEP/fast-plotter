@@ -49,12 +49,18 @@ def weighting_vars(df):
 
 
 def split_df(df, first_values, level=0):
+    if df is None:
+        return None, None
     if isinstance(first_values, str):
         regex = re.compile(first_values)
         first_values = [val for val in df.index.unique(level) if regex.match(val)]
     second = df.drop(first_values, level=level)
     second_values = second.index.unique(level=level)
     first = df.drop(second_values, level=level)
+    if len(first) == 0:
+        first = None
+    if len(second) == 0:
+        second = None
     return first, second
 
 
