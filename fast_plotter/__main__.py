@@ -22,6 +22,8 @@ def arg_parser(args=None):
     parser = ArgumentParser(description=__doc__)
     parser.add_argument("tables", type=str, nargs="+",
                         help="Table files to process")
+    parser.add_argument("-c", "--config", type=str,
+                        help="YAML config to control common plotting options")
     parser.add_argument("-o", "--outdir", type=str, default="plots",
                         help="Output directory to save plots to")
     parser.add_argument("-e", "--extension", type=str, default="png",
@@ -44,9 +46,25 @@ def arg_parser(args=None):
 def main(args=None):
     if args is None:
         args = arg_parser().parse_args()
+    config = getattr(args, "config", None)
+    if config:
+        args = process_cfg(config, args)
 
     for infile in args.tables:
         process_one_file(infile, args)
+
+
+def process_cfg(cfg_file, args):
+    import yaml
+    with open(cfg_file, "r") as infile:
+        cfg = yaml.load(infile)
+    # Only way to neatly allow cmd-line args to override config and handle
+    # defaults seems to be:
+    parser = arg_parser()
+    parser.set_defaults(**cfg)
+    args = parser.parse_args()
+
+    return args
 
 
 def process_one_file(infile, args):
@@ -67,8 +85,7 @@ def process_one_file(infile, args):
                 for col in df_filtered.columns:
                     df_filtered[col][isnull[col]] = df["n"][isnull[col]]
             df_filtered.columns = [n.replace(weight + ":", "") for n in df_filtered.columns]
-        plots = plot_all(df_filtered, infile + "__" + weight, dataset_col=args.dataset_col,
-                         data=args.data, signal=args.signal, scale_sims=args.lumi, yscale=args.yscale)
+        plots = plot_all(df_filtered, infile + "__" + weight, **vars(args))
         save_plots(infile, weight, plots, args.outdir, args.extension)
 
 

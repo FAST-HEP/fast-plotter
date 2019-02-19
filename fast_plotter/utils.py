@@ -114,3 +114,15 @@ def sum_over_datasets(df, dataset_level="dataset"):
     groups = groupby_all_but(df, level=dataset_level)
     summed = groups.sum()
     return summed
+
+
+def order_datasets(df, dataset_order, dataset_level="dataset", values="sumw"):
+    if dataset_order.startswith("sum"):
+        sums = df.groupby(level=dataset_level).sum()
+        if dataset_order == "sum-ascending":
+            dataset_order = sums.sort_values(by=values, ascending=True).index.tolist()
+        elif dataset_order == "sum-descending":
+            dataset_order = sums.sort_values(by=values, ascending=False).index.tolist()
+    if isinstance(dataset_order, list):
+        return df.reindex(dataset_order, axis=0, level=dataset_level)
+    raise RuntimeError("Bad dataset_order value")

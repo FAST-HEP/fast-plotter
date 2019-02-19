@@ -4,13 +4,14 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-def plot_all(df, project_1d=True, project_2d=True, data="data", signal=None, dataset_col="dataset", yscale="log", scale_sims=None):
+def plot_all(df, project_1d=True, project_2d=True, data="data", signal=None, dataset_col="dataset",
+             yscale="log", lumi=None, annotations=[], dataset_order="sum-ascending", **kwargs):
     figures = {}
 
     dimensions = utils.binning_vars(df)
 
     if len(dimensions) == 1:
-        figures[(("yscale", yscale),)] = plot_1d(df, yscale=yscale)
+        figures[(("yscale", yscale),)] = plot_1d(df, yscale=yscale, annotations=annotations)
 
     if dataset_col in dimensions:
         dimensions = tuple(dim for dim in dimensions if dim != dataset_col)
@@ -18,14 +19,16 @@ def plot_all(df, project_1d=True, project_2d=True, data="data", signal=None, dat
     if project_1d and len(dimensions) >= 1:
         for dim in dimensions:
             projected = df.groupby(level=(dim, dataset_col)).sum()
-            plot = plot_1d_many(projected, data=data, signal=signal, dataset_col=dataset_col, yscale=yscale, scale_sims=scale_sims)
+            if dataset_order is not None:
+                projected = utils.order_datasets(projected, dataset_order, dataset_col)
+            plot = plot_1d_many(projected, data=data, signal=signal, dataset_col=dataset_col,
+                                yscale=yscale, scale_sims=lumi, annotations=annotations)
             figures[(("project", dim), ("yscale", yscale))] = plot
 
     if project_2d and len(dimensions) > 2:
         logger.warn("project_2d is not yet implemented")
 
     return figures
-
 
 def actually_plot(df, x_axis, y, yerr, kind, label, ax, dataset_col="dataset"):
     if kind == "scatter":
@@ -43,7 +46,7 @@ def actually_plot(df, x_axis, y, yerr, kind, label, ax, dataset_col="dataset"):
 def plot_1d_many(df, prefix="", data="data", signal=None, dataset_col="dataset", 
                  plot_sims="stack", plot_data="sum", plot_signal=None, 
                  kind_data="scatter", kind_sims="fill", kind_signal="line",
-                 yscale="linear", scale_sims=None, summary="ratio"):
+                 yscale="linear", scale_sims=None, summary="ratio", annotations=[]):
     df = utils.convert_intervals(df, to="mid")
     in_df_data, in_df_sims = utils.split_data_sims(df, data_labels=data, dataset_level=dataset_col)
     if scale_sims is not None:
@@ -85,9 +88,11 @@ def plot_1d_many(df, prefix="", data="data", signal=None, dataset_col="dataset",
         merged = _merge_datasets(df, combine, dataset_col, param_name=var_name)
         actually_plot(merged, x_axis=x_axis, y=y, yerr=yerr, kind=style, label=label, ax=main_ax, dataset_col=dataset_col)
 
-    main_ax.grid(True)
+    add_annotations(annotations, main_ax)
     main_ax.set_yscale(yscale)
     main_ax.legend()
+    main_ax.grid(True)
+    main_ax.set_axisbelow(True)
 
     if not summary:
         return main_ax, None
@@ -117,9 +122,19 @@ def _merge_datasets(df, style, dataset_col, param_name="_merge_datasets"):
     return df
 
 
+def add_annotations(annotations, ax):
+    for cfg in annotations:
+        cfg = cfg.copy()
+        s = cfg.pop("text")
+        xy = cfg.pop("position")
+        cfg.setdefault("xycoords", "axes fraction")
+        ax.annotate(s, xy=xy, **cfg)
+
+
 def plot_1d(df, kind="line", yscale="lin"):
     fig, ax = plt.subplots(1)
     df["sumw"].plot(kind=kind)
+    ax.set_axisbelow(True)
     plt.grid(True)
     plt.yscale(yscale)
     return fig
@@ -136,3 +151,4 @@ def plot_ratio(data, sims, x, y, yvar, ax):
     ratio.reset_index().plot.scatter(x=x, y="Data / MC", yerr="err", ax=ax)
     ax.set_ylim([0., 2])
     ax.grid(True)
+    ax.set_axisbelow(True)
