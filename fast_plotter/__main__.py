@@ -5,7 +5,7 @@ import os
 import matplotlib
 matplotlib.use('Agg')
 from .utils import read_binned_df, weighting_vars, decipher_filename
-from .plotting import plot_all
+from .plotting import plot_all, add_annotations
 import logging
 from . import utils as utils
 #from matplotlib import rc
@@ -93,7 +93,26 @@ def process_one_file(infile, args):
                     df_filtered[col][isnull[col]] = df["n"][isnull[col]]
             df_filtered.columns = [n.replace(weight + ":", "") for n in df_filtered.columns]
         plots = plot_all(df_filtered, infile + "__" + weight, **vars(args))
+        dress_main_plots(plots, **vars(args))
         save_plots(infile, weight, plots, args.outdir, args.extension)
+
+
+def dress_main_plots(plots, annotations=[], yscale=None, ylabel=None, legend={}, limits={}, **kwargs):
+    for main_ax, _ in plots.values():
+        add_annotations(annotations, main_ax)
+        if yscale:
+            main_ax.set_yscale(yscale)
+        if ylabel:
+            main_ax.set_ylabel(ylabel)
+        main_ax.legend(**legend)
+        main_ax.grid(True)
+        main_ax.set_axisbelow(True)
+        for axis, lims in limits.items():
+            lims = map(float, lims)
+            if axis.lower() == "x": 
+                main_ax.set_xlim(*lims)
+            if axis.lower() == "y": 
+                main_ax.set_ylim(*lims)
 
 
 def save_plots(infile, weight, plots, outdir, extension):

@@ -6,7 +6,7 @@ logger = logging.getLogger(__name__)
 
 def plot_all(df, project_1d=True, project_2d=True, data="data", signal=None, dataset_col="dataset",
              yscale="log", lumi=None, annotations=[], dataset_order="sum-ascending", 
-             bin_variable_replacements={}, ylabel=None, limits={}, legend={}, **kwargs):
+             bin_variable_replacements={}, **kwargs):
     figures = {}
 
     dimensions = utils.binning_vars(df)
@@ -24,14 +24,15 @@ def plot_all(df, project_1d=True, project_2d=True, data="data", signal=None, dat
             projected = utils.rename_index(projected, bin_variable_replacements)
             if dataset_order is not None:
                 projected = utils.order_datasets(projected, dataset_order, dataset_col)
-            plot = plot_1d_many(projected, data=data, signal=signal, dataset_col=dataset_col, legend_opts=legend,
-                                limits=limits, ylabel=ylabel, yscale=yscale, scale_sims=lumi, annotations=annotations)
+            plot = plot_1d_many(projected, data=data, signal=signal,
+                                dataset_col=dataset_col, scale_sims=lumi)
             figures[(("project", dim), ("yscale", yscale))] = plot
 
     if project_2d and len(dimensions) > 2:
         logger.warn("project_2d is not yet implemented")
 
     return figures
+
 
 def actually_plot(df, x_axis, y, yerr, kind, label, ax, dataset_col="dataset"):
     if kind == "scatter":
@@ -47,9 +48,9 @@ def actually_plot(df, x_axis, y, yerr, kind, label, ax, dataset_col="dataset"):
 
 
 def plot_1d_many(df, prefix="", data="data", signal=None, dataset_col="dataset",
-                 plot_sims="stack", plot_data="sum", plot_signal=None, legend_opts={},
-                 kind_data="scatter", kind_sims="fill", kind_signal="line", ylabel=None,
-                 limits={}, yscale="linear", scale_sims=None, summary="ratio", annotations=[]):
+                 plot_sims="stack", plot_data="sum", plot_signal=None, 
+                 kind_data="scatter", kind_sims="fill", kind_signal="line",
+                 scale_sims=None, summary="ratio"):
     df = utils.convert_intervals(df, to="mid")
     in_df_data, in_df_sims = utils.split_data_sims(df, data_labels=data, dataset_level=dataset_col)
     if scale_sims is not None:
@@ -92,19 +93,6 @@ def plot_1d_many(df, prefix="", data="data", signal=None, dataset_col="dataset",
         merged = _merge_datasets(df, combine, dataset_col, param_name=var_name)
         actually_plot(merged, x_axis=x_axis, y=y, yerr=yerr, kind=style, label=label, ax=main_ax, dataset_col=dataset_col)
 
-    add_annotations(annotations, main_ax)
-    main_ax.set_yscale(yscale)
-    main_ax.set_ylabel(ylabel)
-    main_ax.legend(**legend_opts)
-    main_ax.grid(True)
-    main_ax.set_axisbelow(True)
-    for axis, lims in limits.items():
-        lims = map(float, lims)
-        if axis.lower() == "x": 
-            main_ax.set_xlim(*lims)
-        if axis.lower() == "y": 
-            main_ax.set_ylim(*lims)
-
     if not summary:
         return main_ax, None
 
@@ -114,7 +102,7 @@ def plot_1d_many(df, prefix="", data="data", signal=None, dataset_col="dataset",
         summed_data = _merge_datasets(in_df_data, "sum", dataset_col=dataset_col)
         summed_sims = _merge_datasets(in_df_sims, "sum", dataset_col=dataset_col)
         plot_ratio(summed_data, summed_sims, x=x_axis, y=y, yvar=yvar, ax=summary_ax)
-        summary_ax.set_xlim(left=main_ax.axis()[0], right=main_ax.axis()[1])
+        #summary_ax.set_xlim(left=main_ax.axis()[0], right=main_ax.axis()[1])
     else:
         raise RuntimeError("Unknown value for summary, '{}'".format(kind_data))
     return main_ax, summary_ax
