@@ -5,12 +5,14 @@ logger = logging.getLogger(__name__)
 
 
 def plot_all(df, project_1d=True, project_2d=True, data="data", signal=None, dataset_col="dataset",
-             yscale="log", lumi=None, annotations=[], dataset_order="sum-ascending", **kwargs):
+             yscale="log", lumi=None, annotations=[], dataset_order="sum-ascending", 
+             bin_variable_replacements={}, ylabel=None, limits={}, legend={}, **kwargs):
     figures = {}
 
     dimensions = utils.binning_vars(df)
 
     if len(dimensions) == 1:
+        df = utils.rename_index(df, bin_variable_replacements)
         figures[(("yscale", yscale),)] = plot_1d(df, yscale=yscale, annotations=annotations)
 
     if dataset_col in dimensions:
@@ -19,10 +21,11 @@ def plot_all(df, project_1d=True, project_2d=True, data="data", signal=None, dat
     if project_1d and len(dimensions) >= 1:
         for dim in dimensions:
             projected = df.groupby(level=(dim, dataset_col)).sum()
+            projected = utils.rename_index(projected, bin_variable_replacements)
             if dataset_order is not None:
                 projected = utils.order_datasets(projected, dataset_order, dataset_col)
-            plot = plot_1d_many(projected, data=data, signal=signal, dataset_col=dataset_col,
-                                yscale=yscale, scale_sims=lumi, annotations=annotations)
+            plot = plot_1d_many(projected, data=data, signal=signal, dataset_col=dataset_col, legend_opts=legend,
+                                limits=limits, ylabel=ylabel, yscale=yscale, scale_sims=lumi, annotations=annotations)
             figures[(("project", dim), ("yscale", yscale))] = plot
 
     if project_2d and len(dimensions) > 2:
@@ -43,10 +46,10 @@ def actually_plot(df, x_axis, y, yerr, kind, label, ax, dataset_col="dataset"):
         raise RuntimeError("Unknown value for 'kind', '{}'".format(kind))
 
 
-def plot_1d_many(df, prefix="", data="data", signal=None, dataset_col="dataset", 
-                 plot_sims="stack", plot_data="sum", plot_signal=None, 
-                 kind_data="scatter", kind_sims="fill", kind_signal="line",
-                 yscale="linear", scale_sims=None, summary="ratio", annotations=[]):
+def plot_1d_many(df, prefix="", data="data", signal=None, dataset_col="dataset",
+                 plot_sims="stack", plot_data="sum", plot_signal=None, legend_opts={},
+                 kind_data="scatter", kind_sims="fill", kind_signal="line", ylabel=None,
+                 limits={}, yscale="linear", scale_sims=None, summary="ratio", annotations=[]):
     df = utils.convert_intervals(df, to="mid")
     in_df_data, in_df_sims = utils.split_data_sims(df, data_labels=data, dataset_level=dataset_col)
     if scale_sims is not None:
@@ -91,9 +94,16 @@ def plot_1d_many(df, prefix="", data="data", signal=None, dataset_col="dataset",
 
     add_annotations(annotations, main_ax)
     main_ax.set_yscale(yscale)
-    main_ax.legend()
+    main_ax.set_ylabel(ylabel)
+    main_ax.legend(**legend_opts)
     main_ax.grid(True)
     main_ax.set_axisbelow(True)
+    for axis, lims in limits.items():
+        lims = map(float, lims)
+        if axis.lower() == "x": 
+            main_ax.set_xlim(*lims)
+        if axis.lower() == "y": 
+            main_ax.set_ylim(*lims)
 
     if not summary:
         return main_ax, None
@@ -149,7 +159,7 @@ def plot_ratio(data, sims, x, y, yvar, ax):
     d_sq = d * d
     ratio["Data / MC"] = d / s
     ratio["err"] = (((1 - 2 * d / s) * d_err_sq + d_sq * s_err_sq / s_sq) / s_sq).abs()
-    ratio.reset_index().plot.scatter(x=x, y="Data / MC", yerr="err", ax=ax)
+    ratio.reset_index().plot.scatter(x=x, y="Data / MC", yerr="err", ax=ax, color="k")
     ax.set_ylim([0., 2])
     ax.grid(True)
     ax.set_axisbelow(True)

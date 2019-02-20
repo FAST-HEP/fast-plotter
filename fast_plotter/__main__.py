@@ -7,6 +7,10 @@ matplotlib.use('Agg')
 from .utils import read_binned_df, weighting_vars, decipher_filename
 from .plotting import plot_all
 import logging
+from . import utils as utils
+#from matplotlib import rc
+#rc('font',**{'family':'serif','serif':['Times']})
+#rc('text', usetex=True)
 
 
 logger = logging.getLogger("fast_plotter")
@@ -70,6 +74,9 @@ def process_cfg(cfg_file, args):
 def process_one_file(infile, args):
     logger.info("Processing: " + infile)
     df = read_binned_df(infile)
+    if hasattr(args, "value_replacements"):
+        for column, replacements in args.value_replacements.items():
+            df.rename(replacements, level=column, inplace=True, axis="index")
     weights = weighting_vars(df)
     for weight in weights:
         if args.weights and weight not in args.weights:
