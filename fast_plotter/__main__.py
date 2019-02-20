@@ -126,7 +126,7 @@ def save_plots(infile, weight, plots, outdir, extension):
         path += "." + extension
         logger.info("Saving plot: " + path)
         plot = main.get_figure()
-        plot.savefig(path)
+        plot.savefig(path, dpi=200)
         matplotlib.pyplot.close(plot)
 
 
