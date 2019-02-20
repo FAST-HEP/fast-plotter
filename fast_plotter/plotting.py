@@ -1,4 +1,5 @@
 from . import utils as utils
+import numpy as np
 import matplotlib.pyplot as plt
 import logging
 logger = logging.getLogger(__name__)
@@ -40,9 +41,18 @@ def actually_plot(df, x_axis, y, yerr, kind, label, ax, dataset_col="dataset"):
     elif kind == "line":
         df[y].unstack(dataset_col).plot.line(drawstyle="steps-mid", ax=ax)
     elif kind == "fill":
-        def fill_coll(col, **kwargs):
-            ax.fill_between(x=col.index.values, y1=col.values, label=col.name, **kwargs)
-        df[y].unstack(dataset_col).iloc[:, ::-1].apply(fill_coll, axis=0, step="mid")
+        class fill_coll():
+            def __init__(self, n_colors):
+                self.calls = 0
+                colormap = plt.cm.nipy_spectral
+                self.colors = [colormap(i) for i in np.linspace(.96, .2, n_colors)]
+            def __call__(self, col, **kwargs):
+                color = self.colors[self.calls]
+                ax.fill_between(x=col.index.values, y1=col.values, label=col.name, linewidth=0, color=color, **kwargs)
+                ax.step(x=col.index.values, y=col.values, color="k", linewidth=0.5, where="mid")
+                self.calls += 1
+        n_datasets = len(df.index.unique(dataset_col))
+        df[y].unstack(dataset_col).iloc[:, ::-1].apply(fill_coll(n_datasets), axis=0, step="mid", )
     else:
         raise RuntimeError("Unknown value for 'kind', '{}'".format(kind))
 
