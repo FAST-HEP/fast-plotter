@@ -37,10 +37,14 @@ def plot_all(df, project_1d=True, project_2d=True, data="data", signal=None, dat
 
 def actually_plot(df, x_axis, y, yerr, kind, label, ax, dataset_col="dataset"):
     if kind == "scatter":
-        df.reset_index().plot.scatter(x=x_axis, y=y, yerr=yerr, color="k", label=label, ax=ax)
+        df.reset_index().plot.scatter(x=x_axis, y=y, yerr=yerr, color="k", label=label, ax=ax, s=13)
+        return
     elif kind == "line":
         df[y].unstack(dataset_col).plot.line(drawstyle="steps-mid", ax=ax)
-    elif kind == "fill":
+        return
+
+    n_datasets = len(df.index.unique(dataset_col))
+    if kind == "fill":
         class fill_coll():
             def __init__(self, n_colors):
                 self.calls = 0
@@ -51,20 +55,37 @@ def actually_plot(df, x_axis, y, yerr, kind, label, ax, dataset_col="dataset"):
                 ax.fill_between(x=col.index.values, y1=col.values, label=col.name, linewidth=0, color=color, **kwargs)
                 ax.step(x=col.index.values, y=col.values, color="k", linewidth=0.5, where="mid")
                 self.calls += 1
-        n_datasets = len(df.index.unique(dataset_col))
-        df[y].unstack(dataset_col).iloc[:, ::-1].apply(fill_coll(n_datasets), axis=0, step="mid", )
+        df[y].unstack(dataset_col).iloc[:, ::-1].apply(fill_coll(n_datasets), axis=0, step="mid")
+    elif kind == "fill-error-last":
+        actually_plot(df, x_axis, y, yerr, "fill", label, ax, dataset_col=dataset_col)
+        summed = df.unstack(dataset_col)
+        last_dataset = summed.columns.get_level_values(1)[n_datasets - 1]
+        summed = summed.xs(last_dataset, level=1, axis="columns") # .iloc[:, -1]
+        x = summed.index.values
+        y_down = summed[y] - summed[yerr]
+        y_up = summed[y] + summed[yerr]
+        ax.fill_between(x=x, y2=y_down, y1=y_up, color="gray", step="mid", alpha=0.7)
     else:
         raise RuntimeError("Unknown value for 'kind', '{}'".format(kind))
 
 
 def plot_1d_many(df, prefix="", data="data", signal=None, dataset_col="dataset",
                  plot_sims="stack", plot_data="sum", plot_signal=None, 
-                 kind_data="scatter", kind_sims="fill", kind_signal="line",
+                 kind_data="scatter", kind_sims="fill-error-last", kind_signal="line",
                  scale_sims=None, summary="ratio"):
+    y = "sumw"
+    yvar = "sumw2"
+    yerr = "err"
+    if prefix:
+        y = prefix + ":" + y
+        yvar = prefix + ":" + yvar
+        yerr = prefix + ":" + yerr
+
     df = utils.convert_intervals(df, to="mid")
     in_df_data, in_df_sims = utils.split_data_sims(df, data_labels=data, dataset_level=dataset_col)
     if scale_sims is not None:
-        in_df_sims *= scale_sims
+        in_df_sims[y] *= scale_sims
+        in_df_sims[yvar] *= scale_sims * scale_sims
     if signal:
         in_df_signal, in_df_sims = utils.split_data_sims(in_df_sims, data_labels=signal, dataset_level=dataset_col)
     else:
@@ -86,13 +107,6 @@ def plot_1d_many(df, prefix="", data="data", signal=None, dataset_col="dataset",
         raise RuntimeError("Too few dimensions to multiple 1D graphs, use plot_1d instead")
     x_axis = x_axis[0]
 
-    y = "sumw"
-    yvar = "sumw2"
-    yerr = "err"
-    if prefix:
-        y = prefix + ":" + y
-        yvar = prefix + ":" + yvar
-        yerr = prefix + ":" + yerr
     config = [(in_df_sims, plot_sims, kind_sims, "Monte Carlo", "plot_sims"),
               (in_df_data, plot_data, kind_data, "Data", "plot_data"),
               (in_df_signal, plot_signal, kind_signal, "Signal", "plot_signal"),
