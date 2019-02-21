@@ -13,6 +13,7 @@ def decipher_filename(filename):
     weights = groups.group("weights").split(".")
     return binning, weights
 
+
 def get_read_options(filename):
     index_cols, _ = decipher_filename(filename)
     options = dict(index_col=range(len(index_cols)),
@@ -114,3 +115,22 @@ def sum_over_datasets(df, dataset_level="dataset"):
     groups = groupby_all_but(df, level=dataset_level)
     summed = groups.sum()
     return summed
+
+
+def order_datasets(df, dataset_order, dataset_level="dataset", values="sumw"):
+    if dataset_order.startswith("sum"):
+        sums = df.groupby(level=dataset_level).sum()
+        if dataset_order == "sum-ascending":
+            dataset_order = sums.sort_values(by=values, ascending=True).index.tolist()
+        elif dataset_order == "sum-descending":
+            dataset_order = sums.sort_values(by=values, ascending=False).index.tolist()
+    if isinstance(dataset_order, list):
+        return df.reindex(dataset_order, axis=0, level=dataset_level)
+    raise RuntimeError("Bad dataset_order value")
+
+
+def rename_index(df, name_replacements):
+    if not isinstance(df.index, pd.core.index.MultiIndex):
+        return df
+    df.index.names = [name_replacements.get(n, n) for n in df.index.names]
+    return df
