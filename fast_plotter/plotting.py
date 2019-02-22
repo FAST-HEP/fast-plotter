@@ -67,20 +67,28 @@ def actually_plot(df, x_axis, y, yerr, kind, label, ax, dataset_col="dataset"):
         x = summed.index.values
         y_down = summed[y] - summed[yerr]
         y_up = summed[y] + summed[yerr]
-        x, y_down, y_up = pad_zero(x, y_down, y_up)
+        x, y_down, y_up = pad_zero(x, y_down.values, y_up.values)
         ax.fill_between(x=x, y2=y_down, y1=y_up, color="gray", step="mid", alpha=0.7)
     else:
         raise RuntimeError("Unknown value for 'kind', '{}'".format(kind))
 
 
 def pad_zero(x, *y_values):
-    mean_width = np.mean(x[1:] - x[:-1])
-    x = np.concatenate(([x[0] - mean_width], x, [x[-1] + mean_width]) )
+    mean_width = np.mean(x[2:-1] - x[1:-2])
+    do_pad_left = not np.isneginf(x[0])
+    do_pad_right = not np.isposinf(x[-1])
+    x_left_padding = [x[0] - mean_width, x[0]] if do_pad_left else [x[1] - mean_width]
+    x_right_padding = [x[-1], x[-1] + mean_width] if do_pad_right else [x[-2] + mean_width]
+
+    x = np.concatenate((x_left_padding, x[1:-1], x_right_padding))
     new_values = []
     for y in y_values:
+        y_left_padding = [0, y[1]] if do_pad_left else [0]
+        y_right_padding = [y[-2], 0] if do_pad_right else [0]
         y[np.isnan(y)] = 0
-        y = np.concatenate(([0], y, [0]))
+        y = np.concatenate((y_left_padding, y[1:-1], y_right_padding))
         new_values.append(y)
+
     return (x,) + tuple(new_values)
 
 
