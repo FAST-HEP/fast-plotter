@@ -52,8 +52,11 @@ def actually_plot(df, x_axis, y, yerr, kind, label, ax, dataset_col="dataset"):
                 self.colors = [colormap(i) for i in np.linspace(.96, .2, n_colors)]
             def __call__(self, col, **kwargs):
                 color = self.colors[self.calls]
-                ax.fill_between(x=col.index.values, y1=col.values, label=col.name, linewidth=0, color=color, **kwargs)
-                ax.step(x=col.index.values, y=col.values, color="k", linewidth=0.5, where="mid")
+                x = col.index.values
+                y = col.values
+                x, y = pad_zero(x, y)
+                ax.fill_between(x=x, y1=y, label=col.name, linewidth=0, color=color, **kwargs)
+                ax.step(x=x, y=y, color="k", linewidth=0.5, where="mid")
                 self.calls += 1
         df[y].unstack(dataset_col).iloc[:, ::-1].apply(fill_coll(n_datasets), axis=0, step="mid")
     elif kind == "fill-error-last":
@@ -64,9 +67,21 @@ def actually_plot(df, x_axis, y, yerr, kind, label, ax, dataset_col="dataset"):
         x = summed.index.values
         y_down = summed[y] - summed[yerr]
         y_up = summed[y] + summed[yerr]
+        x, y_down, y_up = pad_zero(x, y_down, y_up)
         ax.fill_between(x=x, y2=y_down, y1=y_up, color="gray", step="mid", alpha=0.7)
     else:
         raise RuntimeError("Unknown value for 'kind', '{}'".format(kind))
+
+
+def pad_zero(x, *y_values):
+    mean_width = np.mean(x[1:] - x[:-1])
+    x = np.concatenate(([x[0] - mean_width], x, [x[-1] + mean_width]) )
+    new_values = []
+    for y in y_values:
+        y[np.isnan(y)] = 0
+        y = np.concatenate(([0], y, [0]))
+        new_values.append(y)
+    return (x,) + tuple(new_values)
 
 
 def plot_1d_many(df, prefix="", data="data", signal=None, dataset_col="dataset",
