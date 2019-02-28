@@ -2,7 +2,7 @@ import re
 import os
 import numpy as np
 import pandas as pd
-from .interval_from_str import interval_from_string, convert_intervals
+from .interval_from_str import interval_from_string
 
 
 def decipher_filename(filename):
@@ -54,7 +54,8 @@ def split_df(df, first_values, level=0):
         return None, None
     if isinstance(first_values, str):
         regex = re.compile(first_values)
-        first_values = [val for val in df.index.unique(level) if regex.match(val)]
+        first_values = [val for val in df.index.unique(
+            level) if regex.match(val)]
     second = df.drop(first_values, level=level)
     second_values = second.index.unique(level=level)
     first = df.drop(second_values, level=level)
@@ -84,15 +85,17 @@ def groupby_all_but(df, by=None, level=None):
     if level is None and by is None:
         raise RuntimeError("Either 'by' or 'level' must be provided")
     if level is not None and by is not None:
-        raise RuntimeError("Only one of 'by' or 'level' should be provided, not both")
+        raise RuntimeError(
+            "Only one of 'by' or 'level' should be provided, not both")
 
     args = {}
     if level:
         if not isinstance(df.index, pd.MultiIndex):
-            raise RuntimeError("Cannot use 'level' to groupby for non-multiindex DataFrame")
+            raise RuntimeError(
+                "Cannot use 'level' to groupby for non-multiindex DataFrame")
         if not isinstance(level, (tuple, list)):
             level = (level,)
-        
+
         group_levels = [l for l in df.index.names if l not in level]
         args["level"] = group_levels
 
@@ -121,9 +124,11 @@ def order_datasets(df, dataset_order, dataset_level="dataset", values="sumw"):
     if dataset_order.startswith("sum"):
         sums = df.groupby(level=dataset_level).sum()
         if dataset_order == "sum-ascending":
-            dataset_order = sums.sort_values(by=values, ascending=True).index.tolist()
+            dataset_order = sums.sort_values(
+                by=values, ascending=True).index.tolist()
         elif dataset_order == "sum-descending":
-            dataset_order = sums.sort_values(by=values, ascending=False).index.tolist()
+            dataset_order = sums.sort_values(
+                by=values, ascending=False).index.tolist()
     if isinstance(dataset_order, list):
         return df.reindex(dataset_order, axis=0, level=dataset_level)
     raise RuntimeError("Bad dataset_order value")

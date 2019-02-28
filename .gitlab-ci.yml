@@ -1,4 +1,4 @@
-image: python:2.7
+image: python
 
 variables:
   TWINE_REPOSITORY_URL: https://upload.pypi.org/legacy/
@@ -51,9 +51,9 @@ python37:
   stage: test
   script: tox -e py37
 
-docs:
-  stage: test
-  script: make docs
+# docs:
+#   stage: test
+#   script: make docs
 
 deploy_pypi:
   stage: deploy

@@ -1,16 +1,12 @@
 """
 Turn them tables into plots
 """
-import os
-import matplotlib
-matplotlib.use('Agg')
 from .utils import read_binned_df, weighting_vars, decipher_filename
 from .plotting import plot_all, add_annotations
 import logging
-from . import utils as utils
-#from matplotlib import rc
-#rc('font',**{'family':'serif','serif':['Times']})
-#rc('text', usetex=True)
+import os
+import matplotlib
+matplotlib.use('Agg')
 
 
 logger = logging.getLogger("fast_plotter")
@@ -91,7 +87,8 @@ def process_one_file(infile, args):
                 isnull = df_filtered.isnull()
                 for col in df_filtered.columns:
                     df_filtered[col][isnull[col]] = df["n"][isnull[col]]
-            df_filtered.columns = [n.replace(weight + ":", "") for n in df_filtered.columns]
+            df_filtered.columns = [
+                n.replace(weight + ":", "") for n in df_filtered.columns]
         plots = plot_all(df_filtered, infile + "__" + weight, **vars(args))
         dress_main_plots(plots, **vars(args))
         save_plots(infile, weight, plots, args.outdir, args.extension)
@@ -109,9 +106,9 @@ def dress_main_plots(plots, annotations=[], yscale=None, ylabel=None, legend={},
         main_ax.set_axisbelow(True)
         for axis, lims in limits.items():
             lims = map(float, lims)
-            if axis.lower() == "x": 
+            if axis.lower() == "x":
                 main_ax.set_xlim(*lims)
-            if axis.lower() == "y": 
+            if axis.lower() == "y":
                 main_ax.set_ylim(*lims)
 
 

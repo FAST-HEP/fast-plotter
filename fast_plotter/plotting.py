@@ -6,7 +6,7 @@ logger = logging.getLogger(__name__)
 
 
 def plot_all(df, project_1d=True, project_2d=True, data="data", signal=None, dataset_col="dataset",
-             yscale="log", lumi=None, annotations=[], dataset_order="sum-ascending", 
+             yscale="log", lumi=None, annotations=[], dataset_order="sum-ascending",
              bin_variable_replacements={}, **kwargs):
     figures = {}
 
@@ -14,7 +14,8 @@ def plot_all(df, project_1d=True, project_2d=True, data="data", signal=None, dat
 
     if len(dimensions) == 1:
         df = utils.rename_index(df, bin_variable_replacements)
-        figures[(("yscale", yscale),)] = plot_1d(df, yscale=yscale, annotations=annotations)
+        figures[(("yscale", yscale),)] = plot_1d(
+            df, yscale=yscale, annotations=annotations)
 
     if dataset_col in dimensions:
         dimensions = tuple(dim for dim in dimensions if dim != dataset_col)
@@ -22,9 +23,11 @@ def plot_all(df, project_1d=True, project_2d=True, data="data", signal=None, dat
     if project_1d and len(dimensions) >= 1:
         for dim in dimensions:
             projected = df.groupby(level=(dim, dataset_col)).sum()
-            projected = utils.rename_index(projected, bin_variable_replacements)
+            projected = utils.rename_index(
+                projected, bin_variable_replacements)
             if dataset_order is not None:
-                projected = utils.order_datasets(projected, dataset_order, dataset_col)
+                projected = utils.order_datasets(
+                    projected, dataset_order, dataset_col)
             plot = plot_1d_many(projected, data=data, signal=signal,
                                 dataset_col=dataset_col, scale_sims=lumi)
             figures[(("project", dim), ("yscale", yscale))] = plot
@@ -37,7 +40,8 @@ def plot_all(df, project_1d=True, project_2d=True, data="data", signal=None, dat
 
 def actually_plot(df, x_axis, y, yerr, kind, label, ax, dataset_col="dataset"):
     if kind == "scatter":
-        df.reset_index().plot.scatter(x=x_axis, y=y, yerr=yerr, color="k", label=label, ax=ax, s=13)
+        df.reset_index().plot.scatter(x=x_axis, y=y, yerr=yerr,
+                                      color="k", label=label, ax=ax, s=13)
         return
     elif kind == "line":
         df[y].unstack(dataset_col).plot.line(drawstyle="steps-mid", ax=ax)
@@ -49,26 +53,33 @@ def actually_plot(df, x_axis, y, yerr, kind, label, ax, dataset_col="dataset"):
             def __init__(self, n_colors):
                 self.calls = 0
                 colormap = plt.cm.nipy_spectral
-                self.colors = [colormap(i) for i in np.linspace(.96, .2, n_colors)]
+                self.colors = [colormap(i)
+                               for i in np.linspace(.96, .2, n_colors)]
+
             def __call__(self, col, **kwargs):
                 color = self.colors[self.calls]
                 x = col.index.values
                 y = col.values
                 x, y = pad_zero(x, y)
-                ax.fill_between(x=x, y1=y, label=col.name, linewidth=0, color=color, **kwargs)
+                ax.fill_between(x=x, y1=y, label=col.name,
+                                linewidth=0, color=color, **kwargs)
                 ax.step(x=x, y=y, color="k", linewidth=0.5, where="mid")
                 self.calls += 1
-        df[y].unstack(dataset_col).iloc[:, ::-1].apply(fill_coll(n_datasets), axis=0, step="mid")
+        df[y].unstack(dataset_col).iloc[:, ::-
+                                        1].apply(fill_coll(n_datasets), axis=0, step="mid")
     elif kind == "fill-error-last":
-        actually_plot(df, x_axis, y, yerr, "fill", label, ax, dataset_col=dataset_col)
+        actually_plot(df, x_axis, y, yerr, "fill",
+                      label, ax, dataset_col=dataset_col)
         summed = df.unstack(dataset_col)
         last_dataset = summed.columns.get_level_values(1)[n_datasets - 1]
-        summed = summed.xs(last_dataset, level=1, axis="columns") # .iloc[:, -1]
+        summed = summed.xs(last_dataset, level=1,
+                           axis="columns")  # .iloc[:, -1]
         x = summed.index.values
         y_down = summed[y] - summed[yerr]
         y_up = summed[y] + summed[yerr]
         x, y_down, y_up = pad_zero(x, y_down.values, y_up.values)
-        ax.fill_between(x=x, y2=y_down, y1=y_up, color="gray", step="mid", alpha=0.7)
+        ax.fill_between(x=x, y2=y_down, y1=y_up,
+                        color="gray", step="mid", alpha=0.7)
     else:
         raise RuntimeError("Unknown value for 'kind', '{}'".format(kind))
 
@@ -77,8 +88,10 @@ def pad_zero(x, *y_values):
     mean_width = np.mean(x[2:-1] - x[1:-2])
     do_pad_left = not np.isneginf(x[0])
     do_pad_right = not np.isposinf(x[-1])
-    x_left_padding = [x[0] - mean_width, x[0]] if do_pad_left else [x[1] - mean_width]
-    x_right_padding = [x[-1], x[-1] + mean_width] if do_pad_right else [x[-2] + mean_width]
+    x_left_padding = [x[0] - mean_width, x[0]
+                      ] if do_pad_left else [x[1] - mean_width]
+    x_right_padding = [x[-1], x[-1] +
+                       mean_width] if do_pad_right else [x[-2] + mean_width]
 
     x = np.concatenate((x_left_padding, x[1:-1], x_right_padding))
     new_values = []
@@ -93,7 +106,7 @@ def pad_zero(x, *y_values):
 
 
 def plot_1d_many(df, prefix="", data="data", signal=None, dataset_col="dataset",
-                 plot_sims="stack", plot_data="sum", plot_signal=None, 
+                 plot_sims="stack", plot_data="sum", plot_signal=None,
                  kind_data="scatter", kind_sims="fill-error-last", kind_signal="line",
                  scale_sims=None, summary="ratio"):
     y = "sumw"
@@ -105,12 +118,14 @@ def plot_1d_many(df, prefix="", data="data", signal=None, dataset_col="dataset",
         yerr = prefix + ":" + yerr
 
     df = utils.convert_intervals(df, to="mid")
-    in_df_data, in_df_sims = utils.split_data_sims(df, data_labels=data, dataset_level=dataset_col)
+    in_df_data, in_df_sims = utils.split_data_sims(
+        df, data_labels=data, dataset_level=dataset_col)
     if scale_sims is not None:
         in_df_sims[y] *= scale_sims
         in_df_sims[yvar] *= scale_sims * scale_sims
     if signal:
-        in_df_signal, in_df_sims = utils.split_data_sims(in_df_sims, data_labels=signal, dataset_level=dataset_col)
+        in_df_signal, in_df_sims = utils.split_data_sims(
+            in_df_sims, data_labels=signal, dataset_level=dataset_col)
     else:
         in_df_signal = None
 
@@ -119,15 +134,17 @@ def plot_1d_many(df, prefix="", data="data", signal=None, dataset_col="dataset",
     if not summary:
         fig, main_ax = plt.subplots(1, 1)
     else:
-        fig, ax = plt.subplots(2, 1, gridspec_kw={"height_ratios": (3, 1)}, sharex=True)
-        fig.subplots_adjust(hspace = .1)
+        fig, ax = plt.subplots(
+            2, 1, gridspec_kw={"height_ratios": (3, 1)}, sharex=True)
+        fig.subplots_adjust(hspace=.1)
         main_ax, summary_ax = ax
 
     x_axis = [col for col in df.index.names if col != dataset_col]
     if len(x_axis) > 1:
         raise RuntimeError("Too many dimensions to plot things in 1D")
     if len(x_axis) == 0:
-        raise RuntimeError("Too few dimensions to multiple 1D graphs, use plot_1d instead")
+        raise RuntimeError(
+            "Too few dimensions to multiple 1D graphs, use plot_1d instead")
     x_axis = x_axis[0]
 
     config = [(in_df_sims, plot_sims, kind_sims, "Monte Carlo", "plot_sims"),
@@ -138,7 +155,8 @@ def plot_1d_many(df, prefix="", data="data", signal=None, dataset_col="dataset",
         if df is None or len(df) == 0:
             continue
         merged = _merge_datasets(df, combine, dataset_col, param_name=var_name)
-        actually_plot(merged, x_axis=x_axis, y=y, yerr=yerr, kind=style, label=label, ax=main_ax, dataset_col=dataset_col)
+        actually_plot(merged, x_axis=x_axis, y=y, yerr=yerr, kind=style,
+                      label=label, ax=main_ax, dataset_col=dataset_col)
 
     if not summary:
         return main_ax, None
@@ -146,10 +164,12 @@ def plot_1d_many(df, prefix="", data="data", signal=None, dataset_col="dataset",
     summary_ax = ax[1]
     if summary == "ratio":
         main_ax.set_xlabel("")
-        summed_data = _merge_datasets(in_df_data, "sum", dataset_col=dataset_col)
-        summed_sims = _merge_datasets(in_df_sims, "sum", dataset_col=dataset_col)
-        plot_ratio(summed_data, summed_sims, x=x_axis, y=y, yvar=yvar, ax=summary_ax)
-        #summary_ax.set_xlim(left=main_ax.axis()[0], right=main_ax.axis()[1])
+        summed_data = _merge_datasets(
+            in_df_data, "sum", dataset_col=dataset_col)
+        summed_sims = _merge_datasets(
+            in_df_sims, "sum", dataset_col=dataset_col)
+        plot_ratio(summed_data, summed_sims, x=x_axis,
+                   y=y, yvar=yvar, ax=summary_ax)
     else:
         raise RuntimeError("Unknown value for summary, '{}'".format(kind_data))
     return main_ax, summary_ax
@@ -193,7 +213,8 @@ def plot_ratio(data, sims, x, y, yvar, ax):
     s_sq = s * s
     d_sq = d * d
     ratio["Data / MC"] = d / s
-    ratio["err"] = (((1 - 2 * d / s) * d_err_sq + d_sq * s_err_sq / s_sq) / s_sq).abs()
+    ratio["err"] = (((1 - 2 * d / s) * d_err_sq +
+                     d_sq * s_err_sq / s_sq) / s_sq).abs()
     ratio.reset_index().plot.scatter(x=x, y="Data / MC", yerr="err", ax=ax, color="k")
     ax.set_ylim([0., 2])
     ax.grid(True)

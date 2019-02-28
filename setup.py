@@ -8,8 +8,8 @@ from setuptools import setup, find_packages
 with open('README.rst') as readme_file:
     readme = readme_file.read()
 
-with open('HISTORY.rst') as history_file:
-    history = history_file.read()
+#with open('HISTORY.rst') as history_file:
+#    history = history_file.read()
 
 requirements = ['matplotlib<3', 'pandas']
 
@@ -41,7 +41,8 @@ setup(
     },
     install_requires=requirements,
     license="Apache Software License 2.0",
-    long_description=readme + '\n\n' + history,
+    long_description=readme,
+    long_description_content_type="text/markdown",
     include_package_data=True,
     keywords='fast_plotter',
     name='fast_plotter',
@@ -49,7 +50,7 @@ setup(
     setup_requires=setup_requirements,
     test_suite='tests',
     tests_require=test_requirements,
-    url='https://github.com/fast-hep/fast_plotter',
+    url='https://github.com/fast-hep/public/fast_plotter',
     version='0.1.0',
     zip_safe=False,
 )
