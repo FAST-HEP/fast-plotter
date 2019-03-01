@@ -11,15 +11,15 @@ with open('README.md') as readme_file:
 #with open('HISTORY.rst') as history_file:
 #    history = history_file.read()
 
-requirements = ['matplotlib<3', 'pandas']
+requirements = ['matplotlib<3', 'pandas', 'numpy']
 
 setup_requirements = ['pytest-runner', ]
 
-test_requirements = ['pytest', 'flake8']
+test_requirements = ['pytest', 'flake8', 'pytest-cov']
 
 setup(
-    author="F.A.S.T",
-    author_email='fast-hep.cern.ch',
+    author="Ben Krikler",
+    author_email='fast-hep@cern.ch',
     classifiers=[
         'Development Status :: 2 - Pre-Alpha',
         'Intended Audience :: Developers',
@@ -50,7 +50,7 @@ setup(
     setup_requires=setup_requirements,
     test_suite='tests',
     tests_require=test_requirements,
-    url='https://github.com/fast-hep/public/fast_plotter',
+    url='https://gitlab.cern.ch/fast-hep/public/fast_plotter',
     version='0.1.0',
     zip_safe=False,
 )
