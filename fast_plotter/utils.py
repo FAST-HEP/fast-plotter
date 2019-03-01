@@ -2,7 +2,10 @@ import re
 import os
 import numpy as np
 import pandas as pd
-from .interval_from_str import interval_from_string
+from .interval_from_str import interval_from_string, convert_intervals
+
+
+__all__ = ["interval_from_string", "convert_intervals"]
 
 
 def decipher_filename(filename):

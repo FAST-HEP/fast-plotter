@@ -65,8 +65,7 @@ def actually_plot(df, x_axis, y, yerr, kind, label, ax, dataset_col="dataset"):
                                 linewidth=0, color=color, **kwargs)
                 ax.step(x=x, y=y, color="k", linewidth=0.5, where="mid")
                 self.calls += 1
-        df[y].unstack(dataset_col).iloc[:, ::-
-                                        1].apply(fill_coll(n_datasets), axis=0, step="mid")
+        df[y].unstack(dataset_col).iloc[:, ::-1].apply(fill_coll(n_datasets), axis=0, step="mid")
     elif kind == "fill-error-last":
         actually_plot(df, x_axis, y, yerr, "fill",
                       label, ax, dataset_col=dataset_col)
@@ -90,8 +89,7 @@ def pad_zero(x, *y_values):
     do_pad_right = not np.isposinf(x[-1])
     x_left_padding = [x[0] - mean_width, x[0]
                       ] if do_pad_left else [x[1] - mean_width]
-    x_right_padding = [x[-1], x[-1] +
-                       mean_width] if do_pad_right else [x[-2] + mean_width]
+    x_right_padding = [x[-1], x[-1] + mean_width] if do_pad_right else [x[-2] + mean_width]
 
     x = np.concatenate((x_left_padding, x[1:-1], x_right_padding))
     new_values = []
@@ -213,8 +211,7 @@ def plot_ratio(data, sims, x, y, yvar, ax):
     s_sq = s * s
     d_sq = d * d
     ratio["Data / MC"] = d / s
-    ratio["err"] = (((1 - 2 * d / s) * d_err_sq +
-                     d_sq * s_err_sq / s_sq) / s_sq).abs()
+    ratio["err"] = (((1 - 2 * d / s) * d_err_sq + d_sq * s_err_sq / s_sq) / s_sq).abs()
     ratio.reset_index().plot.scatter(x=x, y="Data / MC", yerr="err", ax=ax, color="k")
     ax.set_ylim([0., 2])
     ax.grid(True)
