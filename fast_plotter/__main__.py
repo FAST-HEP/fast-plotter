@@ -1,12 +1,12 @@
 """
 Turn them tables into plots
 """
+import matplotlib
+matplotlib.use('Agg')
 from .utils import read_binned_df, weighting_vars, decipher_filename
 from .plotting import plot_all, add_annotations
 import logging
 import os
-import matplotlib
-matplotlib.use('Agg')
 
 
 logger = logging.getLogger("fast_plotter")
