@@ -1,41 +1,21 @@
-============
 fast-plotter
 ============
+[![pypi package](https://img.shields.io/pypi/v/fast_plotter.svg)](https://pypi.python.org/pypi/fast_plotter)
+[![pipeline status](https://gitlab.cern.ch/fast-hep/public/fast-plotter/badges/master/pipeline.svg)](https://gitlab.cern.ch/fast-hep/public/fast-plotter/commits/master)
 
+To install
+```bash
+pip install fast-plotter
+```
 
-.. image:: https://img.shields.io/pypi/v/fast_plotter.svg
-        :target: https://pypi.python.org/pypi/fast_plotter
-
-.. image:: https://img.shields.io/travis/fast-hep/fast_plotter.svg
-        :target: https://travis-ci.org/fast-hep/fast_plotter
-
-.. image:: https://readthedocs.org/projects/fast-plotter/badge/?version=latest
-        :target: https://fast-plotter.readthedocs.io/en/latest/?badge=latest
-        :alt: Documentation Status
-
-
-
-
-F.A.S.T. plotter
-
-To install::
-
-    git clone https://:@gitlab.cern.ch:8443/fast-hep/public/fast-plotter.git
-
+Or for development:
+```bash
+pip install -e git+https://gitlab.cern.ch/fast-hep/public/fast-plotter.git#egg=fast-plotter
+```
 
 * Free software: Apache Software License 2.0
-* Documentation: https://fast-plotter.readthedocs.io.
-
 
 Features
 --------
-
-* TODO
-
-Credits
--------
-
-This package was created with Cookiecutter_ and the `audreyr/cookiecutter-pypackage`_ project template.
-
-.. _Cookiecutter: https://github.com/audreyr/cookiecutter
-.. _`audreyr/cookiecutter-pypackage`: https://github.com/audreyr/cookiecutter-pypackage
+* Functions to turn binned dataframes in the form produced from [fast-carpenter](https://gitlab.cern.ch/fast-hep/public/fast-carpenter)
+* A simple command-line tool to produce plots with decent defaults
