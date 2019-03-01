@@ -54,10 +54,15 @@ python37:
 # docs:
 #   stage: test
 #   script: make docs
+#
 
 deploy_pypi:
+  image: python
   stage: deploy
   script:
+    - echo "[pypi]" >> ~/.pypirc
+    - echo "username =" $PYPI_USER >> ~/.pypirc
+    - echo "password =" $PYPI_PASSWORD >> ~/.pypirc
     - pip install -U twine setuptools
     - python setup.py check sdist bdist_wheel
     - twine upload dist/*
@@ -65,7 +70,6 @@ deploy_pypi:
     - tags
   except:
     - branches
-
 
 cleanup_pypirc:
   image: python
