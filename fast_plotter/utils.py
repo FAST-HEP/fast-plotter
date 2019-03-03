@@ -19,7 +19,7 @@ def decipher_filename(filename):
 
 def get_read_options(filename):
     index_cols, _ = decipher_filename(filename)
-    options = dict(index_col=range(len(index_cols)),
+    options = dict(index_col=list(range(len(index_cols))),
                    comment="#"
                    )
     return options
