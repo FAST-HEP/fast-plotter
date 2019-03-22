@@ -1,4 +1,5 @@
 from . import utils as utils
+import traceback
 import numpy as np
 import matplotlib.pyplot as plt
 import logging
@@ -22,15 +23,21 @@ def plot_all(df, project_1d=True, project_2d=True, data="data", signal=None, dat
 
     if project_1d and len(dimensions) >= 1:
         for dim in dimensions:
+            logger.info("Making 1D Projection: " + dim)
             projected = df.groupby(level=(dim, dataset_col)).sum()
             projected = utils.rename_index(
                 projected, bin_variable_replacements)
             if dataset_order is not None:
                 projected = utils.order_datasets(
                     projected, dataset_order, dataset_col)
-            plot = plot_1d_many(projected, data=data, signal=signal,
-                                dataset_col=dataset_col, scale_sims=lumi)
-            figures[(("project", dim), ("yscale", yscale))] = plot
+            try:
+                plot = plot_1d_many(projected, data=data, signal=signal,
+                                    dataset_col=dataset_col, scale_sims=lumi)
+                figures[(("project", dim), ("yscale", yscale))] = plot
+            except Exception as e:
+                logger.error("Couldn't plot 1D projection: " + dim)
+                logger.error(traceback.print_exc())
+                logger.error(e)
 
     if project_2d and len(dimensions) > 2:
         logger.warn("project_2d is not yet implemented")
@@ -38,41 +45,79 @@ def plot_all(df, project_1d=True, project_2d=True, data="data", signal=None, dat
     return figures
 
 
+class fill_coll(object):
+    def __init__(self, n_colors=10, ax=None, fill=True, line=True):
+        self.calls = 0
+        colormap = plt.cm.nipy_spectral
+        self.colors = [colormap(i)
+                       for i in np.linspace(.96, .2, n_colors)]
+        self.ax = ax
+        self.fill = fill
+        self.line = line
+
+    def pre_call(self, col):
+        ax = self.ax
+        if not ax:
+            ax = plt.gca()
+        color = self.colors[self.calls]
+        x = col.index.values
+        y = col.values
+        return ax, x, y, color
+
+    def __call__(self, col, **kwargs):
+        ax, x, y, color = self.pre_call(col)
+        if x.dtype.kind in 'biufc':
+            x, y = pad_zero(x, y)
+        if self.fill:
+            ax.fill_between(x=x, y1=y, label=col.name,
+                            linewidth=0, color=color, **kwargs)
+        if self.line:
+            if self.fill:
+                label = None
+                color = "k"
+                width = 0.5
+            else:
+                color = None
+                label = col.name
+                width = 1
+            ax.step(x=x, y=y, color=color, linewidth=width, where="mid", label=label)
+        self.calls += 1
+
+
+class bar_coll(fill_coll):
+    def __call__(self, col, **kwargs):
+        ax, x, y, color = self.pre_call(col)
+        align = "center"
+        if x.dtype.kind in 'biufc':
+            align = "edge"
+        facecolor = list(color)
+        facecolor[-1] *= 0.5
+        ax.bar(x, y, edgecolor=color, facecolor=facecolor, width=1, label=col.name, align=align)
+        self.calls += 1
+
+
 def actually_plot(df, x_axis, y, yerr, kind, label, ax, dataset_col="dataset"):
+    n_datasets = len(df.index.unique(dataset_col))
     if kind == "scatter":
         df.reset_index().plot.scatter(x=x_axis, y=y, yerr=yerr,
                                       color="k", label=label, ax=ax, s=13)
         return
     elif kind == "line":
-        df[y].unstack(dataset_col).plot.line(drawstyle="steps-mid", ax=ax)
+        filler = fill_coll(n_datasets, ax=ax, fill=False)
+        df[y].unstack(dataset_col).iloc[:, ::-1].apply(filler, axis=0, step="mid")
         return
-
-    n_datasets = len(df.index.unique(dataset_col))
-    if kind == "fill":
-        class fill_coll():
-            def __init__(self, n_colors):
-                self.calls = 0
-                colormap = plt.cm.nipy_spectral
-                self.colors = [colormap(i)
-                               for i in np.linspace(.96, .2, n_colors)]
-
-            def __call__(self, col, **kwargs):
-                color = self.colors[self.calls]
-                x = col.index.values
-                y = col.values
-                x, y = pad_zero(x, y)
-                ax.fill_between(x=x, y1=y, label=col.name,
-                                linewidth=0, color=color, **kwargs)
-                ax.step(x=x, y=y, color="k", linewidth=0.5, where="mid")
-                self.calls += 1
-        df[y].unstack(dataset_col).iloc[:, ::-1].apply(fill_coll(n_datasets), axis=0, step="mid")
+    elif kind == "bar":
+        filler = bar_coll(n_datasets, ax=ax)
+        df[y].unstack(dataset_col).iloc[:, ::-1].apply(filler, axis=0, step="mid")
+    elif kind == "fill":
+        filler = fill_coll(n_datasets, ax=ax)
+        df[y].unstack(dataset_col).iloc[:, ::-1].apply(filler, axis=0, step="mid")
     elif kind == "fill-error-last":
         actually_plot(df, x_axis, y, yerr, "fill",
                       label, ax, dataset_col=dataset_col)
         summed = df.unstack(dataset_col)
         last_dataset = summed.columns.get_level_values(1)[n_datasets - 1]
-        summed = summed.xs(last_dataset, level=1,
-                           axis="columns")  # .iloc[:, -1]
+        summed = summed.xs(last_dataset, level=1, axis="columns")
         x = summed.index.values
         y_down = summed[y] - summed[yerr]
         y_up = summed[y] + summed[yerr]
@@ -84,9 +129,12 @@ def actually_plot(df, x_axis, y, yerr, kind, label, ax, dataset_col="dataset"):
 
 
 def pad_zero(x, *y_values):
-    mean_width = np.mean(x[2:-1] - x[1:-2])
     do_pad_left = not np.isneginf(x[0])
     do_pad_right = not np.isposinf(x[-1])
+    width_slice = x[None if do_pad_left else 1:None if do_pad_right else -1]
+    mean_width = width_slice[0]
+    if len(width_slice) > 1:
+        mean_width = np.diff(width_slice).mean()
     x_left_padding = [x[0] - mean_width, x[0]
                       ] if do_pad_left else [x[1] - mean_width]
     x_right_padding = [x[-1], x[-1] + mean_width] if do_pad_right else [x[-2] + mean_width]
@@ -155,6 +203,7 @@ def plot_1d_many(df, prefix="", data="data", signal=None, dataset_col="dataset",
         merged = _merge_datasets(df, combine, dataset_col, param_name=var_name)
         actually_plot(merged, x_axis=x_axis, y=y, yerr=yerr, kind=style,
                       label=label, ax=main_ax, dataset_col=dataset_col)
+    main_ax.set_xlabel(x_axis)
 
     if not summary:
         return main_ax, None
