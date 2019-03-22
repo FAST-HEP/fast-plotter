@@ -162,6 +162,7 @@ def plot_1d_many(df, prefix="", data="data", signal=None, dataset_col="dataset",
         merged = _merge_datasets(df, combine, dataset_col, param_name=var_name)
         actually_plot(merged, x_axis=x_axis, y=y, yerr=yerr, kind=style,
                       label=label, ax=main_ax, dataset_col=dataset_col)
+    main_ax.set_xlabel(x_axis)
 
     if not summary:
         return main_ax, None
