@@ -1,20 +1,20 @@
 """
 Turn them tables into plots
 """
+import os
+import logging
 import matplotlib
 matplotlib.use('Agg')
 from .utils import read_binned_df, weighting_vars, decipher_filename
 from .plotting import plot_all, add_annotations
-import logging
-import os
 
 
 logger = logging.getLogger("fast_plotter")
 logger.setLevel(logging.INFO)
-handler = logging.StreamHandler()
-formatter = logging.Formatter('%(name)s - %(levelname)s - %(message)s')
-handler.setFormatter(formatter)
-logger.addHandler(handler)
+HANDLER = logging.StreamHandler()
+FORMATTER = logging.Formatter('%(name)s - %(levelname)s - %(message)s')
+HANDLER.setFormatter(FORMATTER)
+logger.addHandler(HANDLER)
 
 
 def arg_parser(args=None):
@@ -45,7 +45,7 @@ def arg_parser(args=None):
 
 def main(args=None):
     if args is None:
-        args = arg_parser().parse_args()
+        args = arg_parser().parse_args(args=args)
     config = getattr(args, "config", None)
     if config:
         args = process_cfg(config, args)
@@ -69,7 +69,7 @@ def process_cfg(cfg_file, args):
 
 def process_one_file(infile, args):
     logger.info("Processing: " + infile)
-    df = read_binned_df(infile)
+    df = read_binned_df(infile, dtype={args.dataset_col: str})
     if hasattr(args, "value_replacements"):
         for column, replacements in args.value_replacements.items():
             df.rename(replacements, level=column, inplace=True, axis="index")
