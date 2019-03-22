@@ -23,6 +23,7 @@ def plot_all(df, project_1d=True, project_2d=True, data="data", signal=None, dat
 
     if project_1d and len(dimensions) >= 1:
         for dim in dimensions:
+            logger.info("Making 1D Projection: " + dim)
             projected = df.groupby(level=(dim, dataset_col)).sum()
             projected = utils.rename_index(
                 projected, bin_variable_replacements)
@@ -44,42 +45,79 @@ def plot_all(df, project_1d=True, project_2d=True, data="data", signal=None, dat
     return figures
 
 
+class fill_coll(object):
+    def __init__(self, n_colors=10, ax=None, fill=True, line=True):
+        self.calls = 0
+        colormap = plt.cm.nipy_spectral
+        self.colors = [colormap(i)
+                       for i in np.linspace(.96, .2, n_colors)]
+        self.ax = ax
+        self.fill = fill
+        self.line = line
+
+    def pre_call(self, col):
+        ax = self.ax
+        if not ax:
+            ax = plt.gca()
+        color = self.colors[self.calls]
+        x = col.index.values
+        y = col.values
+        return ax, x, y, color
+
+    def __call__(self, col, **kwargs):
+        ax, x, y, color = self.pre_call(col)
+        if x.dtype.kind in 'biufc':
+            x, y = pad_zero(x, y)
+        if self.fill:
+            ax.fill_between(x=x, y1=y, label=col.name,
+                            linewidth=0, color=color, **kwargs)
+        if self.line:
+            if self.fill:
+                label = None
+                color = "k"
+                width = 0.5
+            else:
+                color = None
+                label = col.name
+                width = 1
+            ax.step(x=x, y=y, color=color, linewidth=width, where="mid", label=label)
+        self.calls += 1
+
+
+class bar_coll(fill_coll):
+    def __call__(self, col, **kwargs):
+        ax, x, y, color = self.pre_call(col)
+        align = "center"
+        if x.dtype.kind in 'biufc':
+            align = "edge"
+        facecolor = list(color)
+        facecolor[-1] *= 0.5
+        ax.bar(x, y, edgecolor=color, facecolor=facecolor, width=1, label=col.name, align=align)
+        self.calls += 1
+
+
 def actually_plot(df, x_axis, y, yerr, kind, label, ax, dataset_col="dataset"):
+    n_datasets = len(df.index.unique(dataset_col))
     if kind == "scatter":
         df.reset_index().plot.scatter(x=x_axis, y=y, yerr=yerr,
                                       color="k", label=label, ax=ax, s=13)
         return
     elif kind == "line":
-        df.drop(axis="index", labels=[np.inf, -np.inf, np.nan], level=0, inplace=True)
-        df[y].unstack(dataset_col).plot.line(drawstyle="steps-mid", ax=ax)
+        filler = fill_coll(n_datasets, ax=ax, fill=False)
+        df[y].unstack(dataset_col).iloc[:, ::-1].apply(filler, axis=0, step="mid")
         return
-
-    n_datasets = len(df.index.unique(dataset_col))
-    if kind == "fill":
-        class fill_coll():
-            def __init__(self, n_colors):
-                self.calls = 0
-                colormap = plt.cm.nipy_spectral
-                self.colors = [colormap(i)
-                               for i in np.linspace(.96, .2, n_colors)]
-
-            def __call__(self, col, **kwargs):
-                color = self.colors[self.calls]
-                x = col.index.values
-                y = col.values
-                x, y = pad_zero(x, y)
-                ax.fill_between(x=x, y1=y, label=col.name,
-                                linewidth=0, color=color, **kwargs)
-                ax.step(x=x, y=y, color="k", linewidth=0.5, where="mid")
-                self.calls += 1
-        df[y].unstack(dataset_col).iloc[:, ::-1].apply(fill_coll(n_datasets), axis=0, step="mid")
+    elif kind == "bar":
+        filler = bar_coll(n_datasets, ax=ax)
+        df[y].unstack(dataset_col).iloc[:, ::-1].apply(filler, axis=0, step="mid")
+    elif kind == "fill":
+        filler = fill_coll(n_datasets, ax=ax)
+        df[y].unstack(dataset_col).iloc[:, ::-1].apply(filler, axis=0, step="mid")
     elif kind == "fill-error-last":
         actually_plot(df, x_axis, y, yerr, "fill",
                       label, ax, dataset_col=dataset_col)
         summed = df.unstack(dataset_col)
         last_dataset = summed.columns.get_level_values(1)[n_datasets - 1]
-        summed = summed.xs(last_dataset, level=1,
-                           axis="columns")  # .iloc[:, -1]
+        summed = summed.xs(last_dataset, level=1, axis="columns")
         x = summed.index.values
         y_down = summed[y] - summed[yerr]
         y_up = summed[y] + summed[yerr]
