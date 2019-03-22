@@ -91,9 +91,12 @@ def actually_plot(df, x_axis, y, yerr, kind, label, ax, dataset_col="dataset"):
 
 
 def pad_zero(x, *y_values):
-    mean_width = np.mean(x[2:-1] - x[1:-2])
     do_pad_left = not np.isneginf(x[0])
     do_pad_right = not np.isposinf(x[-1])
+    width_slice = x[1 if do_pad_left else 0:-1 if do_pad_right else None]
+    mean_width = width_slice[0]
+    if len(width_slice) > 1:
+        mean_width = np.diff(width_slice).mean()
     x_left_padding = [x[0] - mean_width, x[0]
                       ] if do_pad_left else [x[1] - mean_width]
     x_right_padding = [x[-1], x[-1] + mean_width] if do_pad_right else [x[-2] + mean_width]
