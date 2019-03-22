@@ -50,6 +50,7 @@ def actually_plot(df, x_axis, y, yerr, kind, label, ax, dataset_col="dataset"):
                                       color="k", label=label, ax=ax, s=13)
         return
     elif kind == "line":
+        df.drop(axis="index", labels=[np.inf, -np.inf, np.nan], level=0, inplace=True)
         df[y].unstack(dataset_col).plot.line(drawstyle="steps-mid", ax=ax)
         return
 
