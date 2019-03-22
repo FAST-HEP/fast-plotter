@@ -1,4 +1,5 @@
 from . import utils as utils
+import traceback
 import numpy as np
 import matplotlib.pyplot as plt
 import logging
@@ -28,9 +29,14 @@ def plot_all(df, project_1d=True, project_2d=True, data="data", signal=None, dat
             if dataset_order is not None:
                 projected = utils.order_datasets(
                     projected, dataset_order, dataset_col)
-            plot = plot_1d_many(projected, data=data, signal=signal,
-                                dataset_col=dataset_col, scale_sims=lumi)
-            figures[(("project", dim), ("yscale", yscale))] = plot
+            try:
+                plot = plot_1d_many(projected, data=data, signal=signal,
+                                    dataset_col=dataset_col, scale_sims=lumi)
+                figures[(("project", dim), ("yscale", yscale))] = plot
+            except Exception as e:
+                logger.error("Couldn't plot 1D projection: " + dim)
+                logger.error(traceback.print_exc())
+                logger.error(e)
 
     if project_2d and len(dimensions) > 2:
         logger.warn("project_2d is not yet implemented")
