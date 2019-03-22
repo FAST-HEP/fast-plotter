@@ -25,12 +25,16 @@ def get_read_options(filename):
     return options
 
 
-def read_binned_df(filename):
+def read_binned_df(filename, **kwargs):
     read_opts = get_read_options(filename)
+    read_opts.update(kwargs)
     df = pd.read_csv(filename, **read_opts)
     columns = df.index.names[:]
     df.reset_index(inplace=True)
+    dtype = kwargs.pop("dtype", [])
     for col in df.columns:
+        if col in dtype:
+            continue
         df[col] = interval_from_string(df[col])
     df.set_index(columns, inplace=True)
     return df
@@ -57,8 +61,7 @@ def split_df(df, first_values, level=0):
         return None, None
     if isinstance(first_values, str):
         regex = re.compile(first_values)
-        first_values = [val for val in df.index.unique(
-            level) if regex.match(val)]
+        first_values = [val for val in df.index.unique(level) if regex.match(val)]
     second = df.drop(first_values, level=level)
     second_values = second.index.unique(level=level)
     first = df.drop(second_values, level=level)
