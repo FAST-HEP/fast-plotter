@@ -40,17 +40,18 @@ def arg_parser(args=None):
                         help="Scale the MC yields by this lumi")
     parser.add_argument("-y", "--yscale", default="log", choices=["log", "linear"],
                         help="Use this scale for the y-axis")
+    parser.add_argument("--halt-errors", dest="continue_errors", default=True, action="store_false",
+                        help="Stop at the first time an error occurs")
     return parser
 
 
 def main(args=None):
-    if args is None:
-        args = arg_parser().parse_args(args=args)
+    args = arg_parser().parse_args(args=args)
     config = getattr(args, "config", None)
     if config:
         args = process_cfg(config, args)
 
-    ran_ok =  True
+    ran_ok = True
     for infile in args.tables:
         ran_ok &= process_one_file(infile, args)
     return 0 if ran_ok else 1
