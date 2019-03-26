@@ -97,12 +97,12 @@ class bar_coll(fill_coll):
 
 
 def actually_plot(df, x_axis, y, yerr, kind, label, ax, dataset_col="dataset"):
-    n_datasets = len(df.index.unique(dataset_col))
     if kind == "scatter":
         df.reset_index().plot.scatter(x=x_axis, y=y, yerr=yerr,
                                       color="k", label=label, ax=ax, s=13)
         return
-    elif kind == "line":
+    n_datasets = len(df.index.unique(dataset_col))
+    if kind == "line":
         filler = fill_coll(n_datasets, ax=ax, fill=False)
         df[y].unstack(dataset_col).iloc[:, ::-1].apply(filler, axis=0, step="mid")
         return
