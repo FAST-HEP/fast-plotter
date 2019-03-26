@@ -49,7 +49,7 @@ def plot_all(df, project_1d=True, project_2d=True, data="data", signal=None, dat
     return figures, ran_ok
 
 
-class fill_coll(object):
+class FillColl(object):
     def __init__(self, n_colors=10, ax=None, fill=True, line=True):
         self.calls = 0
         colormap = plt.cm.nipy_spectral
@@ -88,7 +88,7 @@ class fill_coll(object):
         self.calls += 1
 
 
-class bar_coll(fill_coll):
+class BarColl(FillColl):
     def __call__(self, col, **kwargs):
         ax, x, y, color = self.pre_call(col)
         align = "center"
@@ -107,14 +107,14 @@ def actually_plot(df, x_axis, y, yerr, kind, label, ax, dataset_col="dataset"):
         return
     n_datasets = len(df.index.unique(dataset_col))
     if kind == "line":
-        filler = fill_coll(n_datasets, ax=ax, fill=False)
+        filler = FillColl(n_datasets, ax=ax, fill=False)
         df[y].unstack(dataset_col).iloc[:, ::-1].apply(filler, axis=0, step="mid")
         return
     elif kind == "bar":
-        filler = bar_coll(n_datasets, ax=ax)
+        filler = BarColl(n_datasets, ax=ax)
         df[y].unstack(dataset_col).iloc[:, ::-1].apply(filler, axis=0, step="mid")
     elif kind == "fill":
-        filler = fill_coll(n_datasets, ax=ax)
+        filler = FillColl(n_datasets, ax=ax)
         df[y].unstack(dataset_col).iloc[:, ::-1].apply(filler, axis=0, step="mid")
     elif kind == "fill-error-last":
         actually_plot(df, x_axis, y, yerr, "fill",
