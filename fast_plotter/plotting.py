@@ -8,10 +8,11 @@ logger = logging.getLogger(__name__)
 
 def plot_all(df, project_1d=True, project_2d=True, data="data", signal=None, dataset_col="dataset",
              yscale="log", lumi=None, annotations=[], dataset_order="sum-ascending",
-             bin_variable_replacements={}, **kwargs):
+             continue_errors=True, bin_variable_replacements={}, **kwargs):
     figures = {}
 
     dimensions = utils.binning_vars(df)
+    ran_ok = True
 
     if len(dimensions) == 1:
         df = utils.rename_index(df, bin_variable_replacements)
@@ -35,14 +36,17 @@ def plot_all(df, project_1d=True, project_2d=True, data="data", signal=None, dat
                                     dataset_col=dataset_col, scale_sims=lumi)
                 figures[(("project", dim), ("yscale", yscale))] = plot
             except Exception as e:
+                if not continue_errors:
+                    raise
                 logger.error("Couldn't plot 1D projection: " + dim)
                 logger.error(traceback.print_exc())
                 logger.error(e)
+                ran_ok = False
 
     if project_2d and len(dimensions) > 2:
         logger.warn("project_2d is not yet implemented")
 
-    return figures
+    return figures, ran_ok
 
 
 class fill_coll(object):
