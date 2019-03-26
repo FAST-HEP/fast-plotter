@@ -50,8 +50,10 @@ def main(args=None):
     if config:
         args = process_cfg(config, args)
 
+    ran_ok =  True
     for infile in args.tables:
-        process_one_file(infile, args)
+        ran_ok &= process_one_file(infile, args)
+    return 0 if ran_ok else 1
 
 
 def process_cfg(cfg_file, args):
@@ -74,6 +76,7 @@ def process_one_file(infile, args):
         for column, replacements in args.value_replacements.items():
             df.rename(replacements, level=column, inplace=True, axis="index")
     weights = weighting_vars(df)
+    ran_ok = True
     for weight in weights:
         if args.weights and weight not in args.weights:
             continue
@@ -89,9 +92,11 @@ def process_one_file(infile, args):
                     df_filtered[col][isnull[col]] = df["n"][isnull[col]]
             df_filtered.columns = [
                 n.replace(weight + ":", "") for n in df_filtered.columns]
-        plots = plot_all(df_filtered, infile + "__" + weight, **vars(args))
+        plots, ok = plot_all(df_filtered, infile + "__" + weight, **vars(args))
+        ran_ok &= ok
         dress_main_plots(plots, **vars(args))
         save_plots(infile, weight, plots, args.outdir, args.extension)
+    return ran_ok
 
 
 def dress_main_plots(plots, annotations=[], yscale=None, ylabel=None, legend={}, limits={}, **kwargs):
