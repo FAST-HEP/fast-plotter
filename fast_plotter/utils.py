@@ -9,12 +9,12 @@ __all__ = ["interval_from_string", "convert_intervals"]
 
 
 def decipher_filename(filename):
-    decipher = re.compile(r"tbl_(?P<binning>.*?)(?P<weights>--.*|)\.csv")
+    decipher = re.compile(r"tbl_(?P<binning>.*?)(--(?P<name>.*)|)\.csv")
     groups = decipher.match(os.path.basename(filename))
 
     binning = groups.group("binning").split(".")
-    weights = groups.group("weights").split(".")
-    return binning, weights
+    name = groups.group("name").split(".")
+    return binning, name
 
 
 def get_read_options(filename):
