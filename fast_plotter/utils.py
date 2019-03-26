@@ -9,11 +9,13 @@ __all__ = ["interval_from_string", "convert_intervals"]
 
 
 def decipher_filename(filename):
-    decipher = re.compile(r"tbl_(?P<binning>.*?)(--(?P<name>.*)|)\.csv")
+    decipher = re.compile(r"tbl_(?P<binning>.*?)(--(?P<names>.*)|)\.csv")
     groups = decipher.match(os.path.basename(filename))
 
     binning = groups.group("binning").split(".")
-    name = groups.group("name").split(".")
+    name = []
+    if groups.group("names"):
+        name = groups.group("names").split(".")
     return binning, name
 
 

@@ -7,6 +7,24 @@ from fast_plotter import utils
 binned_df_name = "tests/tbl_datset.njet.csv"
 
 
+def test_decipher_filename():
+    bins, names = utils.decipher_filename("tests/tbl_dataset.njet.csv")
+    assert len(names) == 0
+    assert set(bins) == set(["dataset", "njet"])
+
+    bins, names = utils.decipher_filename("tests/tbl_dataset.njet--weights.csv")
+    assert set(names) == set(["weights"])
+    assert set(bins) == set(["dataset", "njet"])
+
+    bins, names = utils.decipher_filename("tests/tbl_njet--weights.csv")
+    assert set(names) == set(["weights"])
+    assert set(bins) == set(["njet"])
+
+    bins, names = utils.decipher_filename("tests/tbl_njet.csv")
+    assert set(names) == set()
+    assert set(bins) == set(["njet"])
+
+
 @pytest.fixture
 def binned_df_dataset_njet():
     datasets = ["data", "mc_1", "mc_2"]
