@@ -119,8 +119,9 @@ def dress_main_plots(plots, annotations=[], yscale=None, ylabel=None, legend={},
 
 
 def save_plots(infile, weight, plots, outdir, extension):
-    binning, _ = decipher_filename(infile)
+    binning, name = decipher_filename(infile)
     kernel = "plot_" + ".".join(binning)
+    kernel += "--" + ".".join(name)
     kernel += "--" + weight
     kernel = os.path.join(outdir, kernel)
     for properties, (main, ratio) in plots.items():
