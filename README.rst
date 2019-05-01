@@ -17,6 +17,10 @@ fast-plotter
    :target: https://fast-plotter.readthedocs.io/
    :alt: Documentation Status
 
+.. image:: https://badges.gitter.im/FAST-HEP/community.svg
+   :target: https://gitter.im/FAST-HEP/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge
+   :alt: Gitter
+
 To install:
 
 .. code-block:: bash
