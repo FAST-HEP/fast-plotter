@@ -13,7 +13,11 @@ fast-plotter
    :alt: pipeline status
 
 
-To install
+.. image:: https://readthedocs.org/projects/fast-plotter/badge/
+   :target: https://fast-plotter.readthedocs.io/
+   :alt: Documentation Status
+
+To install:
 
 .. code-block:: bash
 
@@ -30,7 +34,6 @@ Or for development:
 
 Features
 --------
-
 
 * Functions to turn binned dataframes in the form produced from `fast-carpenter <https://gitlab.cern.ch/fast-hep/public/fast-carpenter>`_
 * A simple command-line tool to produce plots with decent defaults
