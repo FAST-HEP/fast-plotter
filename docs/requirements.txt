@@ -1,0 +1,4 @@
+m2r
+sphinx-rtd-theme
+sphinxcontrib-apidoc
+sphinxcontrib-programoutput
