@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# fast-carpenter documentation build configuration file, created by
+# fast-plotter documentation build configuration file, created by
 # sphinx-quickstart on Thu Jul 13 09:48:02 2017.
 #
 # This file is execfile()d with the current directory set to its
@@ -19,7 +19,7 @@
 import os
 import sys
 import inspect
-import fast_carpenter
+import fast_plotter
 
 
 # Get the project root dir, which is the parent dir of this
@@ -67,7 +67,7 @@ source_suffix = ['.rst', '.md']
 master_doc = 'index'
 
 # General information about the project.
-project = u'fast-carpenter'
+project = u'fast-plotter'
 copyright = u'2019, Ben Krikler'
 author = u'Ben Krikler'
 
@@ -140,7 +140,7 @@ html_static_path = ['_static']
 # -- Options for HTMLHelp output ------------------------------------------
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'fast-carpenter-doc'
+htmlhelp_basename = 'fast-plotter-doc'
 
 
 # -- Options for LaTeX output ---------------------------------------------
@@ -167,7 +167,7 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (master_doc, 'fast-carpenter.tex', u'fast-carpenter Documentation',
+    (master_doc, 'fast-plotter.tex', u'fast-plotter Documentation',
      [author], 'manual'),
 ]
 
@@ -177,7 +177,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    (master_doc, 'fast-carpenter', u'fast-carpenter Documentation',
+    (master_doc, 'fast-plotter', u'fast-plotter Documentation',
      [author], 1)
 ]
 
@@ -188,8 +188,8 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-    (master_doc, 'fast-carpenter', u'fast-carpenter Documentation',
-     author, 'fast-carpenter', 'One line description of project.',
+    (master_doc, 'fast-plotter', u'fast-plotter Documentation',
+     author, 'fast-plotter', 'One line description of project.',
      'Miscellaneous'),
 ]
 
@@ -198,7 +198,7 @@ texinfo_documents = [
 intersphinx_mapping = {'https://docs.python.org/': None}
 
 # Configure the sphinxcontrib.apidoc extension
-apidoc_module_dir = '../fast_carpenter'
+apidoc_module_dir = '../fast_plotter'
 apidoc_toc_file = False
 apidoc_module_first = True
 apidoc_separate_modules = True
@@ -251,14 +251,14 @@ def linkcode_resolve(domain, info):
     else:
         linespec = ""
 
-    fn = os.path.relpath(fn, start=os.path.dirname(fast_carpenter.__file__))
-    version = fast_carpenter.__version__
+    fn = os.path.relpath(fn, start=os.path.dirname(fast_plotter.__file__))
+    version = fast_plotter.__version__
     if 'dev' in version:
         version = "master"
     else:
         version = "v" + version
-    url_root = "https://gitlab.cern.ch/fast-hep/public/fast-carpenter/blob/"
-    return url_root + "%s/fast_carpenter/%s%s" % (version, fn, linespec)
+    url_root = "https://gitlab.cern.ch/fast-hep/public/fast-plotter/blob/"
+    return url_root + "%s/fast_plotter/%s%s" % (version, fn, linespec)
 
 
 # Control the napoleon extension for nicer docstrings

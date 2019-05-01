@@ -1,4 +1,4 @@
-Welcome to fast-carpenter's documentation!
+Welcome to fast-plotter's documentation!
 ==========================================
 
 .. include:: ../README.rst
