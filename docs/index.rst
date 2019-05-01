@@ -1,20 +1,12 @@
-Welcome to fast-plotter's documentation!
-==========================================
-
 .. include:: ../README.rst
-   :end-before: Installation and usage
 
 .. toctree::
    :maxdepth: 3
-   :caption: Contents:
+   :caption: Contents
 
 
-   setup
-   philosophy
    command_line
-   processing_config
    examples
-   glossary
 
 .. toctree::
    :maxdepth: 1
