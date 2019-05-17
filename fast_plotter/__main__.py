@@ -5,8 +5,8 @@ import os
 import logging
 import matplotlib
 matplotlib.use('Agg')
-from .utils import read_binned_df, weighting_vars, decipher_filename
-from .plotting import plot_all, add_annotations
+from .utils import read_binned_df, weighting_vars, decipher_filename # noqa
+from .plotting import plot_all, add_annotations # noqa
 
 
 logger = logging.getLogger("fast_plotter")
