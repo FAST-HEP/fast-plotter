@@ -6,7 +6,7 @@ variables:
 before_script:
   - curl -O https://bootstrap.pypa.io/get-pip.py
   - python get-pip.py
-  - pip install -r requirements_dev.txt
+  - pip install -r .requirements_dev.txt
 
 after_script:
   - pip install codecov
