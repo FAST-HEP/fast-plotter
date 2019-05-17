@@ -1,4 +1,3 @@
-import pytest
 import numpy as np
 from fast_plotter import plotting
 
