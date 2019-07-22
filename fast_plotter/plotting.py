@@ -8,7 +8,8 @@ logger = logging.getLogger(__name__)
 
 def plot_all(df, project_1d=True, project_2d=True, data="data", signal=None, dataset_col="dataset",
              yscale="log", lumi=None, annotations=[], dataset_order="sum-ascending",
-             continue_errors=True, bin_variable_replacements={}, **kwargs):
+             continue_errors=True, bin_variable_replacements={}, colourmap="nipy_spectral",
+             **kwargs):
     figures = {}
 
     dimensions = utils.binning_vars(df)
@@ -28,12 +29,12 @@ def plot_all(df, project_1d=True, project_2d=True, data="data", signal=None, dat
             projected = df.groupby(level=(dim, dataset_col)).sum()
             projected = utils.rename_index(
                 projected, bin_variable_replacements)
-            if dataset_order is not None:
-                projected = utils.order_datasets(
-                    projected, dataset_order, dataset_col)
+            projected = utils.order_datasets(projected, "sum-ascending", dataset_col)
             try:
                 plot = plot_1d_many(projected, data=data, signal=signal,
-                                    dataset_col=dataset_col, scale_sims=lumi)
+                                    dataset_col=dataset_col, scale_sims=lumi,
+                                    colourmap=colourmap, dataset_order=dataset_order
+                                    )
                 figures[(("project", dim), ("yscale", yscale))] = plot
             except Exception as e:
                 if not continue_errors:
@@ -50,11 +51,14 @@ def plot_all(df, project_1d=True, project_2d=True, data="data", signal=None, dat
 
 
 class FillColl(object):
-    def __init__(self, n_colors=10, ax=None, fill=True, line=True):
+    def __init__(self, n_colors=10, ax=None, fill=True, line=True, colourmap="nipy_spectral", dataset_order=None):
         self.calls = 0
-        colormap = plt.cm.nipy_spectral
-        self.colors = [colormap(i)
+        colourmap = plt.get_cmap(colourmap)
+        self.colors = [colourmap(i)
                        for i in np.linspace(.96, .2, n_colors)]
+        self.dataset_order = {}
+        if dataset_order:
+            self.dataset_order = {n: i for i, n in enumerate(dataset_order)}
         self.ax = ax
         self.fill = fill
         self.line = line
@@ -63,7 +67,10 @@ class FillColl(object):
         ax = self.ax
         if not ax:
             ax = plt.gca()
-        color = self.colors[self.calls]
+        index = self.calls
+        if self.dataset_order:
+            index = self.dataset_order.get(col.name, index)
+        color = self.colors[index]
         x = col.index.values
         y = col.values
         return ax, x, y, color
@@ -100,25 +107,25 @@ class BarColl(FillColl):
         self.calls += 1
 
 
-def actually_plot(df, x_axis, y, yerr, kind, label, ax, dataset_col="dataset"):
+def actually_plot(df, x_axis, y, yerr, kind, label, ax, dataset_col="dataset", colourmap="nipy_spectral", dataset_order=None):
     if kind == "scatter":
         df.reset_index().plot.scatter(x=x_axis, y=y, yerr=yerr,
                                       color="k", label=label, ax=ax, s=13)
         return
     n_datasets = len(df.index.unique(dataset_col))
     if kind == "line":
-        filler = FillColl(n_datasets, ax=ax, fill=False)
+        filler = FillColl(n_datasets, ax=ax, fill=False, colourmap=colourmap, dataset_order=dataset_order)
         df[y].unstack(dataset_col).iloc[:, ::-1].apply(filler, axis=0, step="mid")
         return
     elif kind == "bar":
-        filler = BarColl(n_datasets, ax=ax)
+        filler = BarColl(n_datasets, ax=ax, colourmap=colourmap, dataset_order=dataset_order)
         df[y].unstack(dataset_col).iloc[:, ::-1].apply(filler, axis=0, step="mid")
     elif kind == "fill":
-        filler = FillColl(n_datasets, ax=ax)
+        filler = FillColl(n_datasets, ax=ax, colourmap=colourmap, dataset_order=dataset_order)
         df[y].unstack(dataset_col).iloc[:, ::-1].apply(filler, axis=0, step="mid")
     elif kind == "fill-error-last":
-        actually_plot(df, x_axis, y, yerr, "fill",
-                      label, ax, dataset_col=dataset_col)
+        actually_plot(df, x_axis, y, yerr, "fill", label, ax,
+                      dataset_col=dataset_col, colourmap=colourmap, dataset_order=dataset_order)
         summed = df.unstack(dataset_col)
         last_dataset = summed.columns.get_level_values(1)[n_datasets - 1]
         summed = summed.xs(last_dataset, level=1, axis="columns")
@@ -158,7 +165,8 @@ def pad_zero(x, *y_values):
 def plot_1d_many(df, prefix="", data="data", signal=None, dataset_col="dataset",
                  plot_sims="stack", plot_data="sum", plot_signal=None,
                  kind_data="scatter", kind_sims="fill-error-last", kind_signal="line",
-                 scale_sims=None, summary="ratio"):
+                 scale_sims=None, summary="ratio", colourmap="nipy_spectral",
+                 dataset_order=None):
     y = "sumw"
     yvar = "sumw2"
     yerr = "err"
@@ -206,7 +214,8 @@ def plot_1d_many(df, prefix="", data="data", signal=None, dataset_col="dataset",
             continue
         merged = _merge_datasets(df, combine, dataset_col, param_name=var_name)
         actually_plot(merged, x_axis=x_axis, y=y, yerr=yerr, kind=style,
-                      label=label, ax=main_ax, dataset_col=dataset_col)
+                      label=label, ax=main_ax, dataset_col=dataset_col,
+                      colourmap=colourmap, dataset_order=dataset_order)
     main_ax.set_xlabel(x_axis)
 
     if not summary:
