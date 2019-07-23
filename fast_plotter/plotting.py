@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 def plot_all(df, project_1d=True, project_2d=True, data="data", signal=None, dataset_col="dataset",
              yscale="log", lumi=None, annotations=[], dataset_order="sum-ascending",
              continue_errors=True, bin_variable_replacements={}, colourmap="nipy_spectral",
-             **kwargs):
+             figsize=None, **kwargs):
     figures = {}
 
     dimensions = utils.binning_vars(df)
@@ -34,7 +34,8 @@ def plot_all(df, project_1d=True, project_2d=True, data="data", signal=None, dat
             try:
                 plot = plot_1d_many(projected, data=data, signal=signal,
                                     dataset_col=dataset_col, scale_sims=lumi,
-                                    colourmap=colourmap, dataset_order=dataset_order
+                                    colourmap=colourmap, dataset_order=dataset_order,
+                                    figsize=figsize
                                     )
                 figures[(("project", dim), ("yscale", yscale))] = plot
             except Exception as e:
@@ -167,7 +168,7 @@ def plot_1d_many(df, prefix="", data="data", signal=None, dataset_col="dataset",
                  plot_sims="stack", plot_data="sum", plot_signal=None,
                  kind_data="scatter", kind_sims="fill-error-last", kind_signal="line",
                  scale_sims=None, summary="ratio", colourmap="nipy_spectral",
-                 dataset_order=None):
+                 dataset_order=None, figsize = (5, 6)):
     y = "sumw"
     yvar = "sumw2"
     yerr = "err"
@@ -191,10 +192,10 @@ def plot_1d_many(df, prefix="", data="data", signal=None, dataset_col="dataset",
     if in_df_data is None or in_df_sims is None:
         summary = None
     if not summary:
-        fig, main_ax = plt.subplots(1, 1)
+        fig, main_ax = plt.subplots(1, 1, figsize=figsize)
     else:
         fig, ax = plt.subplots(
-            2, 1, gridspec_kw={"height_ratios": (3, 1)}, sharex=True)
+            2, 1, gridspec_kw={"height_ratios": (3, 1)}, sharex=True, figsize=figsize)
         fig.subplots_adjust(hspace=.1)
         main_ax, summary_ax = ax
 
