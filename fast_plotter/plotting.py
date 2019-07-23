@@ -1,4 +1,5 @@
 from . import utils as utils
+from . import statistics as stats
 import traceback
 import numpy as np
 import matplotlib.pyplot as plt
@@ -229,7 +230,7 @@ def plot_1d_many(df, prefix="", data="data", signal=None, dataset_col="dataset",
         summed_sims = _merge_datasets(
             in_df_sims, "sum", dataset_col=dataset_col)
         plot_ratio(summed_data, summed_sims, x=x_axis,
-                   y=y, yvar=yvar, ax=summary_ax)
+                   y=y, yerr=yerr, ax=summary_ax)
     else:
         raise RuntimeError("Unknown value for summary, '{}'".format(kind_data))
     return main_ax, summary_ax
@@ -266,15 +267,17 @@ def plot_1d(df, kind="line", yscale="lin"):
     return fig
 
 
-def plot_ratio(data, sims, x, y, yvar, ax):
+def plot_ratio(data, sims, x, y, yerr, ax):
+    s, s_err_sq = sims[y].values, sims[yerr].values
+    d, d_err_sq = data[y].values, data[yerr].values
+    central, lower, upper = stats.ratio_root(d, d_err_sq, s, s_err_sq)
     ratio = data.copy()
-    s, s_err_sq = sims[y], sims[yvar]
-    d, d_err_sq = data[y], data[yvar]
-    s_sq = s * s
-    d_sq = d * d
-    ratio["Data / MC"] = d / s
-    ratio["err"] = (((1 - 2 * d / s) * d_err_sq + d_sq * s_err_sq / s_sq) / s_sq).abs()
-    ratio.reset_index().plot.scatter(x=x, y="Data / MC", yerr="err", ax=ax, color="k")
+    ratio["Data / MC"] = central
+    ratio["err_down"] = lower
+    ratio["err_up"] = upper
+    ratio.reset_index(inplace=True)
+    ax.errorbar(x=ratio[x], y=ratio["Data / MC"], fmt="o", yerr=(ratio.err_down, ratio.err_up), color="k")
     ax.set_ylim([0., 2])
     ax.grid(True)
     ax.set_axisbelow(True)
+    ax.set_xlabel(x)
