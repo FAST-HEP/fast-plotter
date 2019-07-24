@@ -33,7 +33,7 @@ Or for development:
 
    pip install -e git+https://github.com/FAST-HEP/fast-plotter.git#egg=fast-plotter
 
-(you may need the `--user` flag)
+(you may need the :code:`--user` flag)
 
 * Free software: Apache Software License 2.0
 
