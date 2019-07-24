@@ -51,6 +51,10 @@ def main(args=None):
     if config:
         args = process_cfg(config, args)
 
+    if not os.path.exists(args.outdir):
+        logger.info("Creating output directory " + args.outdir)
+        os.makedirs(args.outdir)
+
     ran_ok = True
     for infile in args.tables:
         ran_ok &= process_one_file(infile, args)
