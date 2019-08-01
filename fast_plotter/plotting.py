@@ -35,7 +35,7 @@ def plot_all(df, project_1d=True, project_2d=True, data="data", signal=None, dat
                 plot = plot_1d_many(projected, data=data, signal=signal,
                                     dataset_col=dataset_col, scale_sims=lumi,
                                     colourmap=colourmap, dataset_order=dataset_order,
-                                    figsize=figsize
+                                    figsize=figsize, **kwargs
                                     )
                 figures[(("project", dim), ("yscale", yscale))] = plot
             except Exception as e:
@@ -47,23 +47,69 @@ def plot_all(df, project_1d=True, project_2d=True, data="data", signal=None, dat
                 ran_ok = False
 
     if project_2d and len(dimensions) > 2:
+        for dim1, dim2 in itertools.combinations(dimensions, 2):
+            logger.info("Making 2D Projection: (%s, %s)" % (dim1, dim2))
+            projected = df.groupby(level=(dim1, dim2, dataset_col)).sum()
+            projected = utils.rename_index(
+                projected, bin_variable_replacements)
+            if dataset_order is not None:
+                projected = utils.order_datasets(
+                    projected, dataset_order, dataset_col)
+            try:
+                plot = plot_2d_many(projected, data=data, signal=signal,
+                                    dataset_col=dataset_col, scale_sims=lumi)
+                figures[(("proj1", dim1), ("proj2", dim2), ("yscale", yscale))] = plot
+            except Exception as e:
+                if not continue_errors:
+                    raise
+                logger.error("Couldn't plot 2D projection: (%s, %s)" % (dim1, dim2))
+                logger.error(traceback.print_exc())
+                logger.error(e)
+                ran_ok = False
+
         logger.warn("project_2d is not yet implemented")
 
+    if mountain_range and len(dimensions) > 2:
+      try:
+          figures[("mountain", "range",), ("yscale", yscale)] = \
+              mrange.plot(df, data=data, signal=signal,
+                          dataset_col=dataset_col, yscale=yscale, lumi=lumi,
+                          annotations=annotations, dataset_order=dataset_order,
+                          bin_variable_replacements=bin_variable_replacements,
+                          colourmap=colourmap, figsize=figsize, **kwargs)
+      except Exception as e:
+          if not continue_errors:
+              raise
+          logger.error("Couldn't make mountain_range plot")
+          logger.error(traceback.print_exc())
+          logger.error(e)
+          ran_ok = False
     return figures, ran_ok
 
 
 class FillColl(object):
-    def __init__(self, n_colors=10, ax=None, fill=True, line=True, colourmap="nipy_spectral", dataset_order=None):
+    def __init__(self, n_colors=10, ax=None, fill=True, line=True,
+                 colourmap="nipy_spectral", dataset_order=None, linewidth=0.5):
         self.calls = 0
-        colourmap = plt.get_cmap(colourmap)
-        self.colors = [colourmap(i)
-                       for i in np.linspace(.96, .2, n_colors)]
+        colour_start = 0.96
+        colour_stop = 0.2
+        if isinstance(colourmap, str):
+            colmap_def = plt.get_cmap(colourmap)
+            n_colors = max(colmap_def.N, n_colors) if colmap_def.N < 256 else n_colors
+        elif isinstance(colourmap, dict):
+            colmap_def = plt.get_cmap(colourmap.get("map"))
+            n_colors = colourmap.get("n_colors", n_colors)
+            colour_start = colourmap.get("colour_start", colour_start)
+            colour_stop = colourmap.get("colour_stop", colour_stop)
+        self.colors = [colmap_def(i)
+                       for i in np.linspace(colour_start, colour_stop, n_colors)]
         self.dataset_order = {}
         if dataset_order:
             self.dataset_order = {n: i for i, n in enumerate(dataset_order)}
         self.ax = ax
         self.fill = fill
         self.line = line
+        self.linewidth = linewidth
 
     def pre_call(self, col):
         ax = self.ax
@@ -88,11 +134,11 @@ class FillColl(object):
             if self.fill:
                 label = None
                 color = "k"
-                width = 0.5
+                width = self.linewidth
             else:
                 color = None
                 label = col.name
-                width = 1
+                width = 1.5
             ax.step(x=x, y=y, color=color, linewidth=width, where="mid", label=label)
         self.calls += 1
 
@@ -168,7 +214,7 @@ def plot_1d_many(df, prefix="", data="data", signal=None, dataset_col="dataset",
                  plot_sims="stack", plot_data="sum", plot_signal=None,
                  kind_data="scatter", kind_sims="fill-error-last", kind_signal="line",
                  scale_sims=None, summary="ratio", colourmap="nipy_spectral",
-                 dataset_order=None, figsize = (5, 6)):
+                 dataset_order=None, figsize=(5, 6), **kwargs):
     y = "sumw"
     yvar = "sumw2"
     yerr = "err"
@@ -269,16 +315,23 @@ def plot_1d(df, kind="line", yscale="lin"):
 
 
 def plot_ratio(data, sims, x, y, yerr, ax):
-    s, s_err_sq = sims[y].values, sims[yerr].values
-    d, d_err_sq = data[y].values, data[yerr].values
-    central, lower, upper = stats.ratio_root(d, d_err_sq, s, s_err_sq)
-    ratio = data.copy()
-    ratio["Data / MC"] = central
-    ratio["err_down"] = lower
-    ratio["err_up"] = upper
-    ratio.reset_index(inplace=True)
-    ax.errorbar(x=ratio[x], y=ratio["Data / MC"], fmt="o", yerr=(ratio.err_down, ratio.err_up), color="k")
+    # make sure both sides agree with the binning and drop all infinities
+    merged = data.join(sims, how="left", lsuffix="data", rsuffix="sims")
+    merged.drop([np.inf, -np.inf], inplace=True, errors="ignore")
+    data = merged.filter(like="data", axis="columns").fillna(0)
+    data.columns = [col.replace("data", "") for col in data.columns]
+    sims = merged.filter(like="sims", axis="columns")
+    sims.columns = [col.replace("sims", "") for col in sims.columns]
+
+    s, s_err_sq = sims[y], sims[yerr]
+    d, d_err_sq = data[y], data[yerr]
+    central, lower, upper = stats.try_root_ratio_plot(d, d_err_sq, s, s_err_sq)
+    mask = (central != 0) & (lower != 0)
+    x_axis = data.reset_index()[x]
+    ax.errorbar(x=x_axis[mask], y=central[mask], yerr=(lower[mask], upper[mask]),
+                fmt="o", markersize=4, color="k")
     ax.set_ylim([0., 2])
     ax.grid(True)
     ax.set_axisbelow(True)
     ax.set_xlabel(x)
+    ax.set_ylabel("Data / MC")
