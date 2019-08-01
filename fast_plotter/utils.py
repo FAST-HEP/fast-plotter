@@ -137,6 +137,7 @@ def order_datasets(df, dataset_order, dataset_level="dataset", values="sumw"):
         elif dataset_order == "sum-descending":
             dataset_order = sums.sort_values(
                 by=values, ascending=False).index.tolist()
+        return df.reindex(dataset_order, axis=0, level=dataset_level)
     elif isinstance(dataset_order, list):
         return df.reindex(dataset_order, axis=0, level=dataset_level)
     raise RuntimeError("Bad dataset_order value")
