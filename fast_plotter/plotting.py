@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 
 
 def plot_all(df, project_1d=True, project_2d=True, data="data", signal=None, dataset_col="dataset",
-             yscale="log", lumi=None, annotations=[], dataset_order="sum-ascending",
+             yscale="log", lumi=None, annotations=[], dataset_order=None,
              continue_errors=True, bin_variable_replacements={}, colourmap="nipy_spectral",
              figsize=None, **kwargs):
     figures = {}
@@ -23,6 +23,8 @@ def plot_all(df, project_1d=True, project_2d=True, data="data", signal=None, dat
 
     if dataset_col in dimensions:
         dimensions = tuple(dim for dim in dimensions if dim != dataset_col)
+        if dataset_order is None:
+            dataset_order = df.index.unique(dataset_col).values
 
     if project_1d and len(dimensions) >= 1:
         for dim in dimensions:
@@ -76,6 +78,12 @@ class FillColl(object):
     def __init__(self, n_colors=10, ax=None, fill=True, line=True,
                  colourmap="nipy_spectral", dataset_order=None, linewidth=0.5):
         self.calls = 0
+
+        self.dataset_order = {}
+        if dataset_order is not None:
+            self.dataset_order = {n: i for i, n in enumerate(dataset_order)}
+            n_colors = max(n_colors, len(dataset_order))
+
         colour_start = 0.96
         colour_stop = 0.2
         if isinstance(colourmap, str):
@@ -88,9 +96,7 @@ class FillColl(object):
             colour_stop = colourmap.get("colour_stop", colour_stop)
         self.colors = [colmap_def(i)
                        for i in np.linspace(colour_start, colour_stop, n_colors)]
-        self.dataset_order = {}
-        if dataset_order:
-            self.dataset_order = {n: i for i, n in enumerate(dataset_order)}
+
         self.ax = ax
         self.fill = fill
         self.line = line
