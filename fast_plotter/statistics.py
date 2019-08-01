@@ -143,7 +143,7 @@ def ratio_vals2(num, num_err_sq, denom, denom_err_sq, conf=0.682689492137):
         # take the intervals in eff as intervals in the Poisson ratio
         eff = eff / (1 - eff) * wratio
         low = low / (1. - low) * wratio
-        upper = upper / (1.-upper) * wratio
+        upper = upper / (1. - upper) * wratio
 
         # Set the point center and its errors
         if not np.isinf(eff):

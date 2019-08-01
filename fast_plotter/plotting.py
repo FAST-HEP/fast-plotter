@@ -126,7 +126,8 @@ class BarColl(FillColl):
         self.calls += 1
 
 
-def actually_plot(df, x_axis, y, yerr, kind, label, ax, dataset_col="dataset", colourmap="nipy_spectral", dataset_order=None):
+def actually_plot(df, x_axis, y, yerr, kind, label, ax, dataset_col="dataset",
+                  colourmap="nipy_spectral", dataset_order=None):
     if kind == "scatter":
         df.reset_index().plot.scatter(x=x_axis, y=y, yerr=yerr,
                                       color="k", label=label, ax=ax, s=13)
