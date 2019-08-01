@@ -7,7 +7,7 @@ def mid_p_interval(total, passed, conf=0.682689492137, is_upper=True):
     alpha = 1. - conf
     alpha_min = alpha / 2
     vmin = alpha_min if is_upper else (1. - alpha_min)
-    tol = 1e-9 # tolerance
+    tol = 1e-9  # tolerance
     pmin = 0
     pmax = 1
     p = 0
@@ -15,23 +15,23 @@ def mid_p_interval(total, passed, conf=0.682689492137, is_upper=True):
     # treat special case for 0<passed<1
     # do a linear interpolation of the upper limit values
     if passed > 0 and passed < 1:
-       p0 =  mid_p_interval(total, 0.0, is_upper)
-       p1 =  mid_p_interval(total, 1.0, is_upper)
-       p = (p1 - p0) * passed + p0
-       return p
+        p0 = mid_p_interval(total, 0.0, is_upper)
+        p1 = mid_p_interval(total, 1.0, is_upper)
+        p = (p1 - p0) * passed + p0
+        return p
 
     while abs(pmax - pmin) > tol:
-       p = (pmin + pmax) / 2
-       # make it work for non integer using the binomial - beta relationship
-       v = 0.5 * beta.pdf(p, passed + 1., total - passed + 1) / (total + 1)
-       # compute the binomial cdf at passed -1
-       if  passed >= 1:
-           v += 1 - beta.cdf(p, passed, total - passed + 1)
+        p = (pmin + pmax) / 2
+        # make it work for non integer using the binomial - beta relationship
+        v = 0.5 * beta.pdf(p, passed + 1., total - passed + 1) / (total + 1)
+        # compute the binomial cdf at passed -1
+        if passed >= 1:
+            v += 1 - beta.cdf(p, passed, total - passed + 1)
 
-       if v > vmin:
-          pmin = p
-       else:
-          pmax = p
+        if v > vmin:
+            pmin = p
+        else:
+            pmax = p
 
     return p
 
@@ -108,52 +108,53 @@ def ratio_vals2(num, num_err_sq, denom, denom_err_sq, conf=0.682689492137):
         if pw == 0 and pw2 == 0:
             p = 0
         else:
-            p = (pw*pw)/pw2
+            p = (pw * pw) / pw2
 
         if tw == 0 and tw2 == 0:
             t = 0
         else:
-            t = (tw*tw)/tw2
+            t = (tw * tw) / tw2
 
         wratio = 1
         if pw > 0 and tw > 0:
             # this is the ratio of the two bin weights ( pw/p  / t/tw )
-            wratio = (pw*t)/(p * tw)
+            wratio = (pw * t) / (p * tw)
         elif pw == 0 and tw > 0:
             # case p histogram has zero  compute the weights from all the histogram
             # weight of histogram - sumw2/sumw
-            wratio = (psumw2 * t) /(psumw * tw)
+            wratio = (psumw2 * t) / (psumw * tw)
         elif tw == 0 and pw > 0:
             # case t histogram has zero  compute the weights from all the histogram
             # weight of histogram - sumw2/sumw
-            wratio = (pw * tsumw) /(p * tsumw2)
+            wratio = (pw * tsumw) / (p * tsumw2)
         elif p > 0:
-            wratio = pw/p #not sure if needed
+            wratio = pw / p  # not sure if needed
 
         t += p
 
         # when not using weights (all cases) or in case of  Poisson ratio with weights
         eff = 0
         if t:
-          eff = p / t
+            eff = p / t
 
         low = mid_p_interval(t, p, conf, False)
         upper = mid_p_interval(t, p, conf, True)
 
         # take the intervals in eff as intervals in the Poisson ratio
-        eff = eff/(1 - eff) * wratio
-        low = low/(1. - low) * wratio
-        upper = upper/(1.-upper) * wratio
+        eff = eff / (1 - eff) * wratio
+        low = low / (1. - low) * wratio
+        upper = upper / (1.-upper) * wratio
 
         # Set the point center and its errors
         if not np.isinf(eff):
             out_eff[i_point] = eff
             out_low[i_point] = low
             out_upper[i_point] = upper
-            npoint += 1 # we have added a point to the graph
+            npoint += 1  # we have added a point to the graph
 
-    #if (npoint < nbins):
-    #   Warning("Divide","Number of graph points is different than histogram bins - %d points have been skipped",nbins-npoint)
+    # if (npoint < nbins):
+    #   Warning("Divide","Number of graph points is different than histogram
+    #   bins - %d points have been skipped",nbins-npoint)
     return out_eff, out_low, out_upper
 
 
@@ -193,4 +194,3 @@ def try_root_ratio_plot(*args, **kwargs):
             raise
         print("\n\tWarning: Using the broken errorbar method for ratio plots.\n\tInstall ROOT and rootpy to resolve\n")
         return ratio_vals2(*args, **kwargs)
-
