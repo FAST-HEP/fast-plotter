@@ -69,21 +69,6 @@ def plot_all(df, project_1d=True, project_2d=True, data="data", signal=None, dat
 
         logger.warn("project_2d is not yet implemented")
 
-    if mountain_range and len(dimensions) > 2:
-      try:
-          figures[("mountain", "range",), ("yscale", yscale)] = \
-              mrange.plot(df, data=data, signal=signal,
-                          dataset_col=dataset_col, yscale=yscale, lumi=lumi,
-                          annotations=annotations, dataset_order=dataset_order,
-                          bin_variable_replacements=bin_variable_replacements,
-                          colourmap=colourmap, figsize=figsize, **kwargs)
-      except Exception as e:
-          if not continue_errors:
-              raise
-          logger.error("Couldn't make mountain_range plot")
-          logger.error(traceback.print_exc())
-          logger.error(e)
-          ran_ok = False
     return figures, ran_ok
 
 
