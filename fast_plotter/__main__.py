@@ -93,7 +93,7 @@ def process_one_file(infile, args):
                     df_filtered[col][isnull[col]] = df["n"][isnull[col]]
             df_filtered.columns = [
                 n.replace(weight + ":", "") for n in df_filtered.columns]
-        plots, ok = plot_all(df_filtered, infile + "__" + weight, **vars(args))
+        plots, ok = plot_all(df_filtered, **vars(args))
         ran_ok &= ok
         dress_main_plots(plots, **vars(args))
         save_plots(infile, weight, plots, args.outdir, args.extension)
