@@ -70,16 +70,19 @@ def ratio_values(num, num_err_sq, denom, denom_err_sq,):
     return ratio, lower, upper
 
 
-def ratio_vals2(_pass, _pass_wsq, _total, _total_wsq, conf=0.682689492137):
-
-    psumw = _pass.sum()
-    psumw2 = _pass_wsq.sum()
-    tsumw = _total.sum()
-    tsumw2 = _total_wsq.sum()
+def ratio_vals2(num, num_err_sq, denom, denom_err_sq, conf=0.682689492137):
+    """
+    Direct port of ROOT code from  TGraphAsymmErrors::Divide with options "midp pois"
+    But it doesn't seem to work properly....
+    """
+    psumw = num.sum()
+    psumw2 = num_err_sq.sum()
+    tsumw = denom.sum()
+    tsumw2 = denom_err_sq.sum()
 
     # Set the graph to have a number of points equal to the number of histogram
     # bins
-    nbins = len(_pass)
+    nbins = len(num)
 
     # Ok, now set the points for each bin
     # (Note: the TH1 bin content is shifted to the right by one:
@@ -94,10 +97,10 @@ def ratio_vals2(_pass, _pass_wsq, _total, _total_wsq, conf=0.682689492137):
     out_upper = np.zeros(nbins)
     for i_point in range(nbins):
 
-        tw = _total[i_point]
-        pw = _pass[i_point]
-        tw2 = _total_wsq[i_point]
-        pw2 = _pass_wsq[i_point]
+        tw = denom[i_point]
+        pw = num[i_point]
+        tw2 = denom_err_sq[i_point]
+        pw2 = num_err_sq[i_point]
 
         # compute ratio on the effective entries ( p and t)
         # special case is when (pw=0, pw2=0) in this case we cannot get the bin weight.
@@ -156,13 +159,38 @@ def ratio_vals2(_pass, _pass_wsq, _total, _total_wsq, conf=0.682689492137):
 
 def ratio_root(num, num_err_sq, denom, denom_err_sq):
     import rootpy.plotting as rp
-    top = rp.Hist(len(num), 0, 1)                                                            
-    bottom = rp.Hist(len(num), 0, 1)                                                         
+    # rootpy seems to switch this on, flooding the terminal with debugging output
+    import logging
+    logging.getLogger("matplotlib.font_manager").setLevel(logging.INFO)
+
+    # Set up the histograms
+    top = rp.Hist(len(num), 0, 1)
+    bottom = rp.Hist(len(num), 0, 1)
     for i, (d, n, d_err, n_err) in enumerate(zip(denom, num, denom_err_sq, num_err_sq)):
         bottom[i + 1] = (d, d_err)
         top[i + 1] = (n, n_err)
+
+    # Do the actual division
     div = rp.Graph.divide(top, bottom, "e0 midp pois")
-    ratios = [point.y.value for point in div]
-    low = [point.y.error_low for point in div]
-    upper = [point.y.error_hi for point in div]
+
+    # Convert this back to the array of points for the ratio plots
+    ratios = np.zeros_like(num)
+    low = np.zeros_like(num)
+    upper = np.zeros_like(num)
+    filled_indices = [top.FindBin(point.x.value) - 1 for point in div]
+    ratios[filled_indices] = [point.y.value for point in div]
+    low[filled_indices] = [point.y.error_low for point in div]
+    upper[filled_indices] = [point.y.error_hi for point in div]
     return ratios, low, upper
+
+
+def try_root_ratio_plot(*args, **kwargs):
+    try:
+        result = ratio_root(*args, **kwargs)
+        return result
+    except ImportError as e:
+        if "rootpy" not in str(e):
+            raise
+        print("\n\tWarning: Using the broken errorbar method for ratio plots.\n\tInstall ROOT and rootpy to resolve\n")
+        return ratio_vals2(*args, **kwargs)
+
