@@ -49,26 +49,6 @@ def plot_all(df, project_1d=True, project_2d=True, data="data", signal=None, dat
                 ran_ok = False
 
     if project_2d and len(dimensions) > 2:
-        for dim1, dim2 in itertools.combinations(dimensions, 2):
-            logger.info("Making 2D Projection: (%s, %s)" % (dim1, dim2))
-            projected = df.groupby(level=(dim1, dim2, dataset_col)).sum()
-            projected = utils.rename_index(
-                projected, bin_variable_replacements)
-            if dataset_order is not None:
-                projected = utils.order_datasets(
-                    projected, dataset_order, dataset_col)
-            try:
-                plot = plot_2d_many(projected, data=data, signal=signal,
-                                    dataset_col=dataset_col, scale_sims=lumi)
-                figures[(("proj1", dim1), ("proj2", dim2), ("yscale", yscale))] = plot
-            except Exception as e:
-                if not continue_errors:
-                    raise
-                logger.error("Couldn't plot 2D projection: (%s, %s)" % (dim1, dim2))
-                logger.error(traceback.print_exc())
-                logger.error(e)
-                ran_ok = False
-
         logger.warn("project_2d is not yet implemented")
 
     return figures, ran_ok
