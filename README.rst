@@ -31,8 +31,9 @@ Or for development:
 
 .. code-block:: bash
 
-   pip install -e git+https://gitlab.cern.ch/fast-hep/public/fast-plotter.git#egg=fast-plotter
+   pip install -e git+https://github.com/FAST-HEP/fast-plotter.git#egg=fast-plotter
 
+(you may need the :code:`--user` flag)
 
 * Free software: Apache Software License 2.0
 
