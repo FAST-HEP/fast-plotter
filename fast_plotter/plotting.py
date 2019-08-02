@@ -132,7 +132,11 @@ def actually_plot(df, x_axis, y, yerr, kind, label, ax, dataset_col="dataset",
         df.reset_index().plot.scatter(x=x_axis, y=y, yerr=yerr,
                                       color="k", label=label, ax=ax, s=13)
         return
-    n_datasets = len(df.index.unique(dataset_col))
+    if dataset_order is not None:
+        input_datasets = df.index.unique(dataset_col)
+        dataset_order = [d for d in dataset_order if d in input_datasets]
+    n_datasets = df.groupby(level=dataset_col).count()
+    n_datasets = len(n_datasets[n_datasets!=0])
     if kind == "line":
         filler = FillColl(n_datasets, ax=ax, fill=False, colourmap=colourmap, dataset_order=dataset_order)
         df[y].unstack(dataset_col).iloc[:, ::-1].apply(filler, axis=0, step="mid")
