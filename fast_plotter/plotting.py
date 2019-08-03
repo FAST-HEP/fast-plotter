@@ -24,7 +24,7 @@ def plot_all(df, project_1d=True, project_2d=True, data="data", signal=None, dat
     if dataset_col in dimensions:
         dimensions = tuple(dim for dim in dimensions if dim != dataset_col)
         if dataset_order is None:
-            dataset_order = df.index.unique(dataset_col).values
+            dataset_order = df.index.unique(dataset_col).tolist()
 
     if project_1d and len(dimensions) >= 1:
         for dim in dimensions:
