@@ -134,7 +134,7 @@ def actually_plot(df, x_axis, y, yerr, kind, label, ax, dataset_col="dataset",
         return
     if dataset_order is not None:
         input_datasets = df.index.unique(dataset_col)
-        dataset_order = [d for d in dataset_order if d in input_datasets]
+        dataset_order = dataset_order + [d for d in input_datasets if d not in dataset_order]
     n_datasets = df.groupby(level=dataset_col).count()
     n_datasets = len(n_datasets[n_datasets!=0])
     if kind == "line":
