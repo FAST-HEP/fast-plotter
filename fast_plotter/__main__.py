@@ -79,6 +79,8 @@ def process_one_file(infile, args):
     df = read_binned_df(infile, dtype={args.dataset_col: str})
     if hasattr(args, "value_replacements"):
         for column, replacements in args.value_replacements.items():
+            if column not in df.index.names:
+                continue
             df.rename(replacements, level=column, inplace=True, axis="index")
             df = df.groupby(level=df.index.names).sum()
     weights = weighting_vars(df)
