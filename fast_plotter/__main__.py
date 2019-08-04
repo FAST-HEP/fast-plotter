@@ -77,12 +77,6 @@ def process_cfg(cfg_file, args):
 def process_one_file(infile, args):
     logger.info("Processing: " + infile)
     df = read_binned_df(infile, dtype={args.dataset_col: str})
-    if hasattr(args, "value_replacements"):
-        for column, replacements in args.value_replacements.items():
-            if column not in df.index.names:
-                continue
-            df.rename(replacements, level=column, inplace=True, axis="index")
-            df = df.groupby(level=df.index.names).sum()
     weights = weighting_vars(df)
     ran_ok = True
     for weight in weights:
@@ -100,6 +94,12 @@ def process_one_file(infile, args):
                     df_filtered[col][isnull[col]] = df["n"][isnull[col]]
             df_filtered.columns = [
                 n.replace(weight + ":", "") for n in df_filtered.columns]
+        if hasattr(args, "value_replacements"):
+            for column, replacements in args.value_replacements.items():
+                if column not in df_filtered.index.names:
+                    continue
+                df_filtered.rename(replacements, level=column, inplace=True, axis="index")
+                df_filtered = df_filtered.groupby(level=df.index.names).sum()
         plots, ok = plot_all(df_filtered, **vars(args))
         ran_ok &= ok
         dress_main_plots(plots, **vars(args))
