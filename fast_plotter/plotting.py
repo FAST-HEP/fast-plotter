@@ -136,7 +136,7 @@ def actually_plot(df, x_axis, y, yerr, kind, label, ax, dataset_col="dataset",
         input_datasets = df.index.unique(dataset_col)
         dataset_order = dataset_order + [d for d in input_datasets if d not in dataset_order]
     n_datasets = df.groupby(level=dataset_col).count()
-    n_datasets = len(n_datasets[n_datasets!=0])
+    n_datasets = len(n_datasets[n_datasets != 0])
     if kind == "line":
         filler = FillColl(n_datasets, ax=ax, fill=False, colourmap=colourmap, dataset_order=dataset_order)
         df[y].unstack(dataset_col).iloc[:, ::-1].apply(filler, axis=0, step="mid")
@@ -164,6 +164,8 @@ def actually_plot(df, x_axis, y, yerr, kind, label, ax, dataset_col="dataset",
 
 
 def pad_zero(x, *y_values):
+    if x.dtype.kind not in 'bifc':
+        return (x,) + tuple(y_values)
     do_pad_left = not np.isneginf(x[0])
     do_pad_right = not np.isposinf(x[-1])
     width_slice = x[None if do_pad_left else 1:None if do_pad_right else -1]

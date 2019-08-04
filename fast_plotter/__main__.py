@@ -80,6 +80,7 @@ def process_one_file(infile, args):
     if hasattr(args, "value_replacements"):
         for column, replacements in args.value_replacements.items():
             df.rename(replacements, level=column, inplace=True, axis="index")
+            df = df.groupby(level=df.index.names).sum()
     weights = weighting_vars(df)
     ran_ok = True
     for weight in weights:
