@@ -17,8 +17,7 @@ def plot_all_2d(df, project_1d=True, project_2d=True, data="data", signal=None, 
     
     if len(dimensions) == 2: #if there is no dataset specified in df
         df = utils.rename_index(df, bin_variable_replacements)
-        figures[(("yscale", yscale),)] = plot_2d(
-            df, yscale=yscale, annotations=annotations)
+        figures[(("yscale", yscale),)] = plot_2d(df)
 
     if dataset_col in dimensions: # check how many dimensions there are excluding dataset 
         dimensions = tuple(dim for dim in dimensions if dim != dataset_col)
@@ -26,15 +25,12 @@ def plot_all_2d(df, project_1d=True, project_2d=True, data="data", signal=None, 
     if project_2d and len(dimensions) > 2: #if we want a 2d hist and the dimensions are >2
         # this will be more complicated once we add the ability to include multiple datasets 
         df = utils.rename_index(df, bin_variable_replacements)
-        figures[(("yscale", yscale),)] = plot_2d(
-            df, yscale=yscale, annotations=annotations)
+        figures[(("yscale", yscale),)] = plot_2d(df)
 
+    return figures, ran_ok
         
-
-
 def plot_2d_many():
     print("many")
-
 
 
 def plot_2d(df):
