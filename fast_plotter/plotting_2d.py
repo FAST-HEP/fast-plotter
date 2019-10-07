@@ -4,7 +4,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 import logging
 logger = logging.getLogger(__name__)
-import seaborn as sns
 
 #might want to eventually add a z scale option
 #
@@ -34,6 +33,7 @@ def plot_2d_many():
 
 
 def plot_2d(df):
+    import seaborn as sns
     dimensions = utils.binning_vars(df) # tuple of column names 
     df.reset_index(inplace=True) # comvert from multiindex to columns
     reshaped = df.pivot(dimensions[2],dimensions[1],dimensions[3]) # reshape columns and rows 
