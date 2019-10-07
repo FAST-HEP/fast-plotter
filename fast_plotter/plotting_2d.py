@@ -11,6 +11,7 @@ def plot_all_2d(df, project_1d=True, project_2d=True, data="data", signal=None, 
              yscale="log", lumi=None, annotations=[], dataset_order="sum-ascending",
              continue_errors=True, bin_variable_replacements={}, **kwargs):
 
+    figures = {}
     dimensions = utils.binning_vars(df)
     ran_ok = True
     
@@ -36,7 +37,7 @@ def plot_2d(df):
     import seaborn as sns
     dimensions = utils.binning_vars(df) # tuple of column names 
     df.reset_index(inplace=True) # comvert from multiindex to columns
-    reshaped = df.pivot(dimensions[2],dimensions[1],dimensions[3]) # reshape columns and rows 
+    reshaped = df.pivot(dimensions[2],dimensions[1],dimensions[3]) # reshape columns and rows [y,x,n]
     f,ax = plt.subplots() # can be generalised for multiple datasets
     sns.heatmap(reshaped,annot=True,ax=ax) # annot could take annotations array? 
     return f
