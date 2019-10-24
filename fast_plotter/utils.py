@@ -1,4 +1,5 @@
 import re
+import six
 import os
 import numpy as np
 import pandas as pd
@@ -58,10 +59,20 @@ def weighting_vars(df):
     return tuple(weight_vars)
 
 
+def mask_rows(df, regex, level=None):
+    if isinstance(regex, six.string_types):
+        regex = re.compile(regex)
+    index = df.index
+    if level is not None:
+        index = index.get_level_values(level)
+    data_rows = index.map(lambda x: bool(regex.search(str(x))))
+    return data_rows
+
+
 def split_df(df, first_values, level=0):
     if df is None:
         return None, None
-    if isinstance(first_values, str):
+    if isinstance(first_values, six.string_types):
         regex = re.compile(first_values)
         first_values = [val for val in df.index.unique(level) if regex.match(val)]
     second = df.drop(first_values, level=level)

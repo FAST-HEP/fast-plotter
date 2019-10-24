@@ -5,8 +5,9 @@ import os
 import logging
 import matplotlib
 matplotlib.use('Agg')
-from .utils import read_binned_df, weighting_vars, decipher_filename  # noqa
-from .plotting import plot_all, add_annotations  # noqa
+from .utils import read_binned_df, weighting_vars # noqa
+from .utils import decipher_filename, mask_rows  # noqa
+from .plotting import plot_all, add_annotations # noqa
 
 
 logger = logging.getLogger("fast_plotter")
@@ -89,9 +90,11 @@ def process_one_file(infile, args):
         else:
             df_filtered = df.filter(like=weight, axis="columns").copy()
             if "n" in df.columns:
-                isnull = df_filtered.isnull()
+                data_rows = mask_rows(df_filtered,
+                                      regex=args.data,
+                                      level=args.dataset_col)
                 for col in df_filtered.columns:
-                    df_filtered[col][isnull[col]] = df["n"][isnull[col]]
+                    df_filtered[col][data_rows] = df["n"][data_rows]
             df_filtered.columns = [
                 n.replace(weight + ":", "") for n in df_filtered.columns]
         if hasattr(args, "value_replacements"):
