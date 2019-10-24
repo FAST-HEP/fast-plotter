@@ -3,9 +3,23 @@ from . import statistics as stats
 import traceback
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.colors as mc
 import logging
 logger = logging.getLogger(__name__)
 
+
+def change_brightness(color, amount):
+    if amount is None:
+        return
+    import colorsys
+    try:
+        c = mc.cnames[color]
+    except:
+        c = color
+    if isinstance(color, tuple):
+        color = mc.to_rgb(c)
+    c = colorsys.rgb_to_hls(*color)
+    return colorsys.hls_to_rgb(c[0], 1 - amount * (1 - c[1]), c[2])
 
 def plot_all(df, project_1d=True, project_2d=True, data="data", signal=None, dataset_col="dataset",
              yscale="log", lumi=None, annotations=[], dataset_order=None,
@@ -66,6 +80,7 @@ class FillColl(object):
 
         colour_start = 0.96
         colour_stop = 0.2
+        darken = None
         if isinstance(colourmap, str):
             colmap_def = plt.get_cmap(colourmap)
             n_colors = max(colmap_def.N, n_colors) if colmap_def.N < 256 else n_colors
@@ -74,6 +89,10 @@ class FillColl(object):
             n_colors = colourmap.get("n_colors", n_colors)
             colour_start = colourmap.get("colour_start", colour_start)
             colour_stop = colourmap.get("colour_stop", colour_stop)
+        if not fill:
+            #colmap_def = plt.get_cmap("Pastel1")
+            darken = 0.02
+
         self.colors = [colmap_def(i)
                        for i in np.linspace(colour_start, colour_stop, n_colors)]
 
@@ -96,21 +115,24 @@ class FillColl(object):
 
     def __call__(self, col, **kwargs):
         ax, x, y, color = self.pre_call(col)
-        if x.dtype.kind in 'biufc':
-            x, y = pad_zero(x, y)
+        ticks = None
         if self.fill:
-            ax.fill_between(x=x, y1=y, label=col.name,
-                            linewidth=0, color=color, **kwargs)
+            draw(ax, "fill_between", x=x, ys=["y1"],
+                 y1=y, label=col.name,
+                 linewidth=0, color=color, **kwargs)
         if self.line:
             if self.fill:
                 label = None
                 color = "k"
                 width = self.linewidth
+                style = "-"
             else:
                 color = None
                 label = col.name
-                width = 1.5
-            ax.step(x=x, y=y, color=color, linewidth=width, where="mid", label=label)
+                width = 2
+                style = "--"
+            draw(ax, "step", x=x, ys=["y"], y=y,
+                 color=color, linewidth=width, where="mid", label=label, linestyle=style)
         self.calls += 1
 
 
@@ -129,6 +151,7 @@ class BarColl(FillColl):
 def actually_plot(df, x_axis, y, yerr, kind, label, ax, dataset_col="dataset",
                   colourmap="nipy_spectral", dataset_order=None):
     if kind == "scatter":
+        print("BEK y", df[y])
         df.reset_index().plot.scatter(x=x_axis, y=y, yerr=yerr,
                                       color="k", label=label, ax=ax, s=13)
         return
@@ -145,7 +168,7 @@ def actually_plot(df, x_axis, y, yerr, kind, label, ax, dataset_col="dataset",
         filler = BarColl(n_datasets, ax=ax, colourmap=colourmap, dataset_order=dataset_order)
         df[y].unstack(dataset_col).iloc[:, ::-1].apply(filler, axis=0, step="mid")
     elif kind == "fill":
-        filler = FillColl(n_datasets, ax=ax, colourmap=colourmap, dataset_order=dataset_order)
+        filler = FillColl(n_datasets, ax=ax, colourmap=colourmap, dataset_order=dataset_order, line=False)
         df[y].unstack(dataset_col).iloc[:, ::-1].apply(filler, axis=0, step="mid")
     elif kind == "fill-error-last":
         actually_plot(df, x_axis, y, yerr, "fill", label, ax,
@@ -154,10 +177,9 @@ def actually_plot(df, x_axis, y, yerr, kind, label, ax, dataset_col="dataset",
         last_dataset = summed.columns.get_level_values(1)[n_datasets - 1]
         summed = summed.xs(last_dataset, level=1, axis="columns")
         x = summed.index.values
-        y_down = summed[y] - summed[yerr]
-        y_up = summed[y] + summed[yerr]
-        x, y_down, y_up = pad_zero(x, y_down.values, y_up.values)
-        ax.fill_between(x=x, y2=y_down, y1=y_up,
+        y_down = (summed[y] - summed[yerr]).values
+        y_up = (summed[y] + summed[yerr]).values
+        draw(ax, "fill_between", x, ys=["y1", "y2"], y2=y_down, y1=y_up,
                         color="gray", step="mid", alpha=0.7)
     else:
         raise RuntimeError("Unknown value for 'kind', '{}'".format(kind))
@@ -313,3 +335,19 @@ def plot_ratio(data, sims, x, y, yerr, ax):
     ax.set_axisbelow(True)
     ax.set_xlabel(x)
     ax.set_ylabel("Data / MC")
+
+
+def draw(ax, method, x, ys, **kwargs):
+    if x.dtype.kind in 'biufc':
+        values = pad_zero(x, *[kwargs[y] for y in ys])
+        x = values[0]
+        new_ys = values[1:]
+        kwargs.update(dict(zip(ys, new_ys)))
+        ticks = None
+    else:
+        x, ticks = np.arange(len(x)), x
+    getattr(ax, method)(x=x, **kwargs)
+    if ticks is not None:
+        ax.set_xticks(x)
+        ax.set_xticklabels(ticks)
+    return x, ticks
