@@ -27,7 +27,7 @@ def arg_parser(args=None):
                         help="YAML config to control common plotting options")
     parser.add_argument("-o", "--outdir", type=str, default="plots",
                         help="Output directory to save plots to")
-    parser.add_argument("-e", "--extension", type=str, default="png",
+    parser.add_argument("-e", "--extension", type=lambda x: x.split(","), default=["png"],
                         help="File extension for images")
     parser.add_argument("-w", "--weights", default=[], type=lambda x: x.split(","),
                         help="comma-separated list of weight schemes to plot things for")
@@ -128,7 +128,7 @@ def dress_main_plots(plots, annotations=[], yscale=None, ylabel=None, legend={},
                 main_ax.set_ylim(*lims)
 
 
-def save_plots(infile, weight, plots, outdir, extension):
+def save_plots(infile, weight, plots, outdir, extensions):
     binning, name = decipher_filename(infile)
     kernel = "plot_" + ".".join(binning)
     kernel += "--" + ".".join(name)
@@ -137,11 +137,12 @@ def save_plots(infile, weight, plots, outdir, extension):
     for properties, (main, ratio) in plots.items():
         insert = "-".join("%s_%s" % prop for prop in properties)
         path = kernel + "--" + insert
-        path += "." + extension
-        logger.info("Saving plot: " + path)
-        plot = main.get_figure()
-        plot.savefig(path, dpi=200)
-        matplotlib.pyplot.close(plot)
+        for ext in extensions:
+            path_ext = path + "." + ext
+            logger.info("Saving plot: " + path_ext)
+            plot = main.get_figure()
+            plot.savefig(path_ext, dpi=200)
+            matplotlib.pyplot.close(plot)
 
 
 if __name__ == "__main__":
