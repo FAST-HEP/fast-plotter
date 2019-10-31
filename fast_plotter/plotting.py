@@ -320,7 +320,7 @@ def plot_1d(df, kind="line", yscale="lin"):
     return fig
 
 
-def plot_ratio(data, sims, x, y, yerr, ax, error=None):
+def plot_ratio(data, sims, x, y, yerr, ax, error="both"):
     # make sure both sides agree with the binning and drop all infinities
     merged = data.join(sims, how="left", lsuffix="data", rsuffix="sims")
     merged.drop([np.inf, -np.inf], inplace=True, errors="ignore")
@@ -331,15 +331,23 @@ def plot_ratio(data, sims, x, y, yerr, ax, error=None):
 
     s, s_err = sims[y], sims[yerr]
     d, d_err = data[y], data[yerr]
-    rel_d_err = (d_err / d).values
-    rel_s_err = (s_err / s).values
-    x_axis = data.reset_index()[x].values
+    x_axis = data.reset_index()[x]
 
-    ax.errorbar(x=x_axis, y=d / s, yerr=rel_d_err, fmt="o", markersize=4, color="k")
-    #ax.fill_between(x=x_axis, y1=1 - rel_s_err, y2=1 + rel_s_err, color="gray")
-    draw(ax, "fill_between", x_axis, ys=["y1", "y2"],
-         y2=1 + rel_s_err, y1=1 - rel_s_err, fill_val=1,
-         color="gray", step="mid", alpha=0.7)
+    if error == "markers":
+        central, lower, upper = stats.try_root_ratio_plot(d, d_err, s, s_err)
+        mask = (central != 0) & (lower != 0)
+        ax.errorbar(x=x_axis[mask], y=central[mask], yerr=(lower[mask], upper[mask]),
+                    fmt="o", markersize=4, color="k")
+
+    elif error == "both":
+        rel_d_err = (d_err / d)
+        rel_s_err = (s_err / s)
+
+        ax.errorbar(x=x_axis.values, y=d / s, yerr=rel_d_err, fmt="o", markersize=4, color="k")
+        draw(ax, "fill_between", x_axis.values, ys=["y1", "y2"],
+             y2=1 + rel_s_err.values, y1=1 - rel_s_err.values, fill_val=1,
+             color="gray", step="mid", alpha=0.7)
+
     ax.set_ylim([0., 2])
     ax.grid(True)
     ax.set_axisbelow(True)
