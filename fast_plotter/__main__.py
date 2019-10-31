@@ -134,6 +134,8 @@ def save_plots(infile, weight, plots, outdir, extensions):
     kernel += "--" + ".".join(name)
     kernel += "--" + weight
     kernel = os.path.join(outdir, kernel)
+    if not isinstance(extensions, (list, tuple)):
+        extensions = [extensions]
     for properties, (main, ratio) in plots.items():
         insert = "-".join("%s_%s" % prop for prop in properties)
         path = kernel + "--" + insert
