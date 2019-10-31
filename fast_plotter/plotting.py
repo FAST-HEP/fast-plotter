@@ -184,7 +184,7 @@ def actually_plot(df, x_axis, y, yerr, kind, label, ax, dataset_col="dataset",
         raise RuntimeError("Unknown value for 'kind', '{}'".format(kind))
 
 
-def pad_zero(x, *y_values):
+def pad_zero(x, *y_values, fill_val=0):
     if x.dtype.kind not in 'bifc':
         return (x,) + tuple(y_values)
     do_pad_left = not np.isneginf(x[0])
@@ -200,9 +200,9 @@ def pad_zero(x, *y_values):
     x = np.concatenate((x_left_padding, x[1:-1], x_right_padding))
     new_values = []
     for y in y_values:
-        y_left_padding = [0, y[1]] if do_pad_left else [0]
-        y_right_padding = [y[-2], 0] if do_pad_right else [0]
-        y[np.isnan(y)] = 0
+        y_left_padding = [fill_val, y[1]] if do_pad_left else [fill_val]
+        y_right_padding = [y[-2], fill_val] if do_pad_right else [fill_val]
+        y[np.isnan(y)] = fill_val
         y = np.concatenate((y_left_padding, y[1:-1], y_right_padding))
         new_values.append(y)
 
@@ -212,7 +212,7 @@ def pad_zero(x, *y_values):
 def plot_1d_many(df, prefix="", data="data", signal=None, dataset_col="dataset",
                  plot_sims="stack", plot_data="sum", plot_signal=None,
                  kind_data="scatter", kind_sims="fill-error-last", kind_signal="line",
-                 scale_sims=None, summary="ratio", colourmap="nipy_spectral",
+                 scale_sims=None, summary="ratio-error-both", colourmap="nipy_spectral",
                  dataset_order=None, figsize=(5, 6), **kwargs):
     y = "sumw"
     yvar = "sumw2"
@@ -269,16 +269,23 @@ def plot_1d_many(df, prefix="", data="data", signal=None, dataset_col="dataset",
         return main_ax, None
 
     summary_ax = ax[1]
-    if summary == "ratio":
+    err_msg = "Unknown value for summary, '{}'".format(summary)
+    if summary.startswith("ratio"):
         main_ax.set_xlabel("")
         summed_data = _merge_datasets(
             in_df_data, "sum", dataset_col=dataset_col)
         summed_sims = _merge_datasets(
             in_df_sims, "sum", dataset_col=dataset_col)
+        if summary == "ratio-error-both":
+            error = "both"
+        elif summary == "ratio-error-markers":
+            error = "markers"
+        else:
+            raise RuntimeError(err_msg)
         plot_ratio(summed_data, summed_sims, x=x_axis,
-                   y=y, yerr=yerr, ax=summary_ax)
+                   y=y, yerr=yerr, ax=summary_ax, error=error)
     else:
-        raise RuntimeError("Unknown value for summary, '{}'".format(kind_data))
+        raise RuntimeError(err_msg)
     return main_ax, summary_ax
 
 
@@ -313,7 +320,7 @@ def plot_1d(df, kind="line", yscale="lin"):
     return fig
 
 
-def plot_ratio(data, sims, x, y, yerr, ax):
+def plot_ratio(data, sims, x, y, yerr, ax, error=None):
     # make sure both sides agree with the binning and drop all infinities
     merged = data.join(sims, how="left", lsuffix="data", rsuffix="sims")
     merged.drop([np.inf, -np.inf], inplace=True, errors="ignore")
@@ -322,13 +329,17 @@ def plot_ratio(data, sims, x, y, yerr, ax):
     sims = merged.filter(like="sims", axis="columns")
     sims.columns = [col.replace("sims", "") for col in sims.columns]
 
-    s, s_err_sq = sims[y], sims[yerr]
-    d, d_err_sq = data[y], data[yerr]
-    central, lower, upper = stats.try_root_ratio_plot(d, d_err_sq, s, s_err_sq)
-    mask = (central != 0) & (lower != 0)
-    x_axis = data.reset_index()[x]
-    ax.errorbar(x=x_axis[mask], y=central[mask], yerr=(lower[mask], upper[mask]),
-                fmt="o", markersize=4, color="k")
+    s, s_err = sims[y], sims[yerr]
+    d, d_err = data[y], data[yerr]
+    rel_d_err = (d_err / d).values
+    rel_s_err = (s_err / s).values
+    x_axis = data.reset_index()[x].values
+
+    ax.errorbar(x=x_axis, y=d / s, yerr=rel_d_err, fmt="o", markersize=4, color="k")
+    #ax.fill_between(x=x_axis, y1=1 - rel_s_err, y2=1 + rel_s_err, color="gray")
+    draw(ax, "fill_between", x_axis, ys=["y1", "y2"],
+         y2=1 + rel_s_err, y1=1 - rel_s_err, fill_val=1,
+         color="gray", step="mid", alpha=0.7)
     ax.set_ylim([0., 2])
     ax.grid(True)
     ax.set_axisbelow(True)
@@ -337,8 +348,9 @@ def plot_ratio(data, sims, x, y, yerr, ax):
 
 
 def draw(ax, method, x, ys, **kwargs):
+    fill_val = kwargs.pop("fill_val", 0)
     if x.dtype.kind in 'biufc':
-        values = pad_zero(x, *[kwargs[y] for y in ys])
+        values = pad_zero(x, *[kwargs[y] for y in ys], fill_val=fill_val)
         x = values[0]
         new_ys = values[1:]
         kwargs.update(dict(zip(ys, new_ys)))
