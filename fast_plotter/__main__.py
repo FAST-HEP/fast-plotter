@@ -5,7 +5,8 @@ import os
 import logging
 import matplotlib
 matplotlib.use('Agg')
-from .utils import read_binned_df, weighting_vars, decipher_filename # noqa
+from .utils import read_binned_df, weighting_vars # noqa
+from .utils import decipher_filename, mask_rows  # noqa
 from .plotting import plot_all, add_annotations # noqa
 
 
@@ -26,7 +27,7 @@ def arg_parser(args=None):
                         help="YAML config to control common plotting options")
     parser.add_argument("-o", "--outdir", type=str, default="plots",
                         help="Output directory to save plots to")
-    parser.add_argument("-e", "--extension", type=str, default="png",
+    parser.add_argument("-e", "--extension", type=lambda x: x.split(","), default=["png"],
                         help="File extension for images")
     parser.add_argument("-w", "--weights", default=[], type=lambda x: x.split(","),
                         help="comma-separated list of weight schemes to plot things for")
@@ -77,9 +78,6 @@ def process_cfg(cfg_file, args):
 def process_one_file(infile, args):
     logger.info("Processing: " + infile)
     df = read_binned_df(infile, dtype={args.dataset_col: str})
-    if hasattr(args, "value_replacements"):
-        for column, replacements in args.value_replacements.items():
-            df.rename(replacements, level=column, inplace=True, axis="index")
     weights = weighting_vars(df)
     ran_ok = True
     for weight in weights:
@@ -92,12 +90,20 @@ def process_one_file(infile, args):
         else:
             df_filtered = df.filter(like=weight, axis="columns").copy()
             if "n" in df.columns:
-                isnull = df_filtered.isnull()
+                data_rows = mask_rows(df_filtered,
+                                      regex=args.data,
+                                      level=args.dataset_col)
                 for col in df_filtered.columns:
-                    df_filtered[col][isnull[col]] = df["n"][isnull[col]]
+                    df_filtered[col][data_rows] = df["n"][data_rows]
             df_filtered.columns = [
                 n.replace(weight + ":", "") for n in df_filtered.columns]
-        plots, ok = plot_all(df_filtered, infile + "__" + weight, **vars(args))
+        if hasattr(args, "value_replacements"):
+            for column, replacements in args.value_replacements.items():
+                if column not in df_filtered.index.names:
+                    continue
+                df_filtered.rename(replacements, level=column, inplace=True, axis="index")
+                df_filtered = df_filtered.groupby(level=df.index.names).sum()
+        plots, ok = plot_all(df_filtered, **vars(args))
         ran_ok &= ok
         dress_main_plots(plots, **vars(args))
         save_plots(infile, weight, plots, args.outdir, args.extension)
@@ -122,20 +128,23 @@ def dress_main_plots(plots, annotations=[], yscale=None, ylabel=None, legend={},
                 main_ax.set_ylim(*lims)
 
 
-def save_plots(infile, weight, plots, outdir, extension):
+def save_plots(infile, weight, plots, outdir, extensions):
     binning, name = decipher_filename(infile)
     kernel = "plot_" + ".".join(binning)
     kernel += "--" + ".".join(name)
     kernel += "--" + weight
     kernel = os.path.join(outdir, kernel)
+    if not isinstance(extensions, (list, tuple)):
+        extensions = [extensions]
     for properties, (main, ratio) in plots.items():
         insert = "-".join("%s_%s" % prop for prop in properties)
         path = kernel + "--" + insert
-        path += "." + extension
-        logger.info("Saving plot: " + path)
-        plot = main.get_figure()
-        plot.savefig(path, dpi=200)
-        matplotlib.pyplot.close(plot)
+        for ext in extensions:
+            path_ext = path + "." + ext
+            logger.info("Saving plot: " + path_ext)
+            plot = main.get_figure()
+            plot.savefig(path_ext, dpi=200)
+            matplotlib.pyplot.close(plot)
 
 
 if __name__ == "__main__":

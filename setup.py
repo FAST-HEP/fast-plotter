@@ -11,7 +11,7 @@ with open('README.rst') as readme_file:
 #with open('HISTORY.rst') as history_file:
 #    history = history_file.read()
 
-requirements = ['matplotlib<3', 'pandas', 'numpy']
+requirements = ['matplotlib<3', 'pandas', 'numpy', 'scipy']
 
 setup_requirements = ['pytest-runner', ]
 
@@ -50,6 +50,6 @@ setup(
     test_suite='tests',
     tests_require=test_requirements,
     url='https://gitlab.cern.ch/fast-hep/public/fast_plotter',
-    version='0.2.1',
+    version='0.3.0',
     zip_safe=False,
 )
