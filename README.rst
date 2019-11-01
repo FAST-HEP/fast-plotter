@@ -8,8 +8,8 @@ fast-plotter
    :alt: pypi package
 
 
-.. image:: https://gitlab.cern.ch/fast-hep/public/fast-plotter/badges/master/pipeline.svg
-   :target: https://gitlab.cern.ch/fast-hep/public/fast-plotter/commits/master
+.. image:: https://travis-ci.com/FAST-HEP/fast-plotter.svg?branch=master
+   :target: https://travis-ci.com/FAST-HEP/fast-plotter
    :alt: pipeline status
 
 
