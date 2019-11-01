@@ -185,7 +185,7 @@ def actually_plot(df, x_axis, y, yerr, kind, label, ax, dataset_col="dataset",
         raise RuntimeError("Unknown value for 'kind', '{}'".format(kind))
 
 
-def pad_zero(x, y_values, fill_val=0):
+def pad_zero(x, y_values=[], fill_val=0):
     if x.dtype.kind not in 'bifc':
         return (x,) + tuple(y_values)
     do_pad_left = not np.isneginf(x[0])
