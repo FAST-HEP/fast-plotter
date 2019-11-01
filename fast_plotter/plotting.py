@@ -14,12 +14,13 @@ def change_brightness(color, amount):
     import colorsys
     try:
         c = mc.cnames[color]
-    except:
+    except Exception:
         c = color
     if isinstance(color, tuple):
         color = mc.to_rgb(c)
     c = colorsys.rgb_to_hls(*color)
     return colorsys.hls_to_rgb(c[0], 1 - amount * (1 - c[1]), c[2])
+
 
 def plot_all(df, project_1d=True, project_2d=True, data="data", signal=None, dataset_col="dataset",
              yscale="log", lumi=None, annotations=[], dataset_order=None,
@@ -80,7 +81,7 @@ class FillColl(object):
 
         colour_start = 0.96
         colour_stop = 0.2
-        darken = None
+        # darken = None
         if isinstance(colourmap, str):
             colmap_def = plt.get_cmap(colourmap)
             n_colors = max(colmap_def.N, n_colors) if colmap_def.N < 256 else n_colors
@@ -90,8 +91,9 @@ class FillColl(object):
             colour_start = colourmap.get("colour_start", colour_start)
             colour_stop = colourmap.get("colour_stop", colour_stop)
         if not fill:
-            #colmap_def = plt.get_cmap("Pastel1")
-            darken = 0.02
+            # colmap_def = plt.get_cmap("Pastel1")
+            # darken = 0.02
+            pass
 
         self.colors = [colmap_def(i)
                        for i in np.linspace(colour_start, colour_stop, n_colors)]
@@ -115,7 +117,6 @@ class FillColl(object):
 
     def __call__(self, col, **kwargs):
         ax, x, y, color = self.pre_call(col)
-        ticks = None
         if self.fill:
             draw(ax, "fill_between", x=x, ys=["y1"],
                  y1=y, label=col.name,
@@ -179,7 +180,7 @@ def actually_plot(df, x_axis, y, yerr, kind, label, ax, dataset_col="dataset",
         y_down = (summed[y] - summed[yerr]).values
         y_up = (summed[y] + summed[yerr]).values
         draw(ax, "fill_between", x, ys=["y1", "y2"], y2=y_down, y1=y_up,
-                        color="gray", step="mid", alpha=0.7)
+             color="gray", step="mid", alpha=0.7)
     else:
         raise RuntimeError("Unknown value for 'kind', '{}'".format(kind))
 
