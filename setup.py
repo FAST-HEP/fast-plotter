@@ -2,16 +2,26 @@
 # -*- coding: utf-8 -*-
 
 """The setup script."""
-
+import os
 from setuptools import setup, find_packages
+
 
 with open('README.rst') as readme_file:
     readme = readme_file.read()
 
+
 #with open('HISTORY.rst') as history_file:
 #    history = history_file.read()
 
-requirements = ['matplotlib<3', 'pandas', 'numpy', 'scipy']
+
+def get_version():
+    _globals = {}
+    with open(os.path.join("fast_plotter", "version.py")) as version_file:
+        exec(version_file.read(), _globals)
+    return _globals["__version__"]
+
+
+requirements = ['matplotlib', 'pandas', 'numpy', 'scipy']
 
 setup_requirements = ['pytest-runner', ]
 
@@ -45,11 +55,11 @@ setup(
     include_package_data=True,
     keywords='fast_plotter',
     name='fast_plotter',
-    packages=find_packages(include=['fast_plotter']),
+    packages=find_packages(include=['fast_plotter*']),
     setup_requires=setup_requirements,
     test_suite='tests',
     tests_require=test_requirements,
-    url='https://gitlab.cern.ch/fast-hep/public/fast_plotter',
-    version='0.3.0',
+    url='https://github.com/fast-hep/fast-plotter',
+    version=get_version(),
     zip_safe=False,
 )

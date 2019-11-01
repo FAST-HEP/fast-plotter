@@ -1,8 +1,10 @@
+import sys
 import pytest
 import fast_plotter.statistics as stats
 # import numpy as np
 
 
+@pytest.mark.skipif(sys.version_info < (3, 5), reason="Test stalls on python2 currently")
 def test_mid_p_interval():
     assert stats.mid_p_interval(1., 1., is_upper=True) == pytest.approx(1)
     assert stats.mid_p_interval(2., 1., is_upper=True) == pytest.approx(0.84134475)

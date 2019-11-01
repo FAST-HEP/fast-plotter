@@ -22,3 +22,14 @@ jobs:
     - stage: test
       script: flake8 --max-line-length=120 fast_plotter tests
       name: flake8
+
+deploy:
+  provider: pypi
+  user: fast-hep
+  distributions: "sdist bdist_wheel"
+  password:
+    secure: "t4qxXUbXZiNEQkHuBnfrmM68Q7TmwlgMSQLu2vpl55szOsI4OznYgEfcA1JLREClylEi3WNdjL6Ln7IFbYDge26Mv8EM4QIyowhsbRRiuUoWpFslkTbKYzUD364jjBLAAohUu+aq+HJu1L7QlwDnycx1XOKCJY/tT9J1mTOhNFp6bYNftXIeuYmhlQ5AGTxaWjUSPAsAxtErExhbXAEA+xmFLl6xXt18DB0+Zf2UbN/xNOh7G+IbUSbUdE+iEloWsA7748BSQXsIF5P7M6Ajllxo/oCyTlEcVGlD2eXT57JP3ZTQGHK8EtTea/BVy8/0F7Lk3bTqrwNEWjtMljre6P4zFseJFluevdgM0NEaW16lc90zA94ppVDrEDtvpW9Q8tR6AqbMsmAiGPLu5mfLULE5C0fC+KeVUQ512EJuf+TF/Cc/ZwD7GEH8R5HvoRR2ePQMwgRA98zcWpONINlMayotkhRBesE6ITvp6iPJIt6XsHocN8kVKoFCZUefPtB+hGe+QyYi1XLcZ+iGp0HHSx+ma63QaplA7B9Yq3RZqYj5Hb9HMHRv5hV0FDsTbDeFgxljEHDMfSkSanE+SPQ0H1ioc2snIB6+m+mM/waJu5n6mYVTme5Z8rJcSGSWEfeGvh+WaVu8kswnYH0YKQVW8zxW3HIedd8jDBXrYW5QrI4="
+  on:
+    tags: true
+    repo: FAST-HEP/fast-plotter
+    condition: "$TRAVIS_PYTHON_VERSION == 3.6 && $TRAVIS_TAG =~ ^v[0-9]+[.][0-9]+[.][0-9]+(-rc[0-9]+|[.]dev[0-9]+)?$"
