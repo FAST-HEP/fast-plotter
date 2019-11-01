@@ -185,7 +185,7 @@ def actually_plot(df, x_axis, y, yerr, kind, label, ax, dataset_col="dataset",
         raise RuntimeError("Unknown value for 'kind', '{}'".format(kind))
 
 
-def pad_zero(x, *y_values, fill_val=0):
+def pad_zero(x, y_values, fill_val=0):
     if x.dtype.kind not in 'bifc':
         return (x,) + tuple(y_values)
     do_pad_left = not np.isneginf(x[0])
@@ -359,7 +359,7 @@ def plot_ratio(data, sims, x, y, yerr, ax, error="both"):
 def draw(ax, method, x, ys, **kwargs):
     fill_val = kwargs.pop("fill_val", 0)
     if x.dtype.kind in 'biufc':
-        values = pad_zero(x, *[kwargs[y] for y in ys], fill_val=fill_val)
+        values = pad_zero(x, [kwargs[y] for y in ys], fill_val=fill_val)
         x = values[0]
         new_ys = values[1:]
         kwargs.update(dict(zip(ys, new_ys)))
