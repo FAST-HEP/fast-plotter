@@ -89,11 +89,17 @@ def split_data_sims(df, data_labels=["data"], dataset_level="dataset"):
     return split_df(df, first_values=data_labels, level=dataset_level)
 
 
-def calculate_error(df, sumw2_label="sumw2", err_label="err", inplace=True):
+def calculate_error(df, sumw2_label="sumw2", err_label="err", inplace=True, do_rel_err=True):
     if not inplace:
         df = df.copy()
+    if do_rel_err:
+        root_n = np.sqrt(df["n"])
     for column in df:
-        if sumw2_label in column:
+        if do_rel_err and column.endswith("sumw"):
+            err_name = column.replace("sumw", err_label)
+            df[err_name] = np.true_divide(df[column], root_n)
+            df[err_name][~np.isfinite(df[err_name])] = np.nan
+        elif not do_rel_err and sumw2_label in column:
             err_name = column.replace(sumw2_label, err_label)
             df[err_name] = np.sqrt(df[column])
     if not inplace:
