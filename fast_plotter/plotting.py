@@ -283,8 +283,10 @@ def plot_1d_many(df, prefix="", data="data", signal=None, dataset_col="dataset",
             error = "markers"
         else:
             raise RuntimeError(err_msg)
+        if not 'ratio_ylim' in kwargs.keys():
+            kwargs['ratio_ylim'] = [0., 2]
         plot_ratio(summed_data, summed_sims, x=x_axis,
-                   y=y, yerr=yerr, ax=summary_ax, error=error)
+                   y=y, yerr=yerr, ax=summary_ax, error=error, ylim=kwargs['ratio_ylim'])
     else:
         raise RuntimeError(err_msg)
     return main_ax, summary_ax
@@ -321,7 +323,7 @@ def plot_1d(df, kind="line", yscale="lin"):
     return fig
 
 
-def plot_ratio(data, sims, x, y, yerr, ax, error="both"):
+def plot_ratio(data, sims, x, y, yerr, ax, error="both", ylim=[0., 2]):
     # make sure both sides agree with the binning and drop all infinities
     merged = data.join(sims, how="left", lsuffix="data", rsuffix="sims")
     merged.drop([np.inf, -np.inf], inplace=True, errors="ignore")
@@ -349,7 +351,7 @@ def plot_ratio(data, sims, x, y, yerr, ax, error="both"):
              y2=1 + rel_s_err.values, y1=1 - rel_s_err.values, fill_val=1,
              color="gray", step="mid", alpha=0.7)
 
-    ax.set_ylim([0., 2])
+    ax.set_ylim(ylim)
     ax.grid(True)
     ax.set_axisbelow(True)
     ax.set_xlabel(x)
