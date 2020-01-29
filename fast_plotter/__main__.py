@@ -2,6 +2,7 @@
 Turn them tables into plots
 """
 import os
+import six
 import logging
 import matplotlib
 matplotlib.use('Agg')
@@ -41,6 +42,10 @@ def arg_parser(args=None):
                         help="Scale the MC yields by this lumi")
     parser.add_argument("-y", "--yscale", default="log", choices=["log", "linear"],
                         help="Use this scale for the y-axis")
+    def split_equals(arg):
+        return arg.split("=")
+    parser.add_argument("-v", "--variable", dest="variables", action="append", default=[], type=split_equals,
+                        help="Define a variable to expand in the config file")
     parser.add_argument("--halt-errors", dest="continue_errors", default=True, action="store_false",
                         help="Stop at the first time an error occurs")
     return parser
@@ -64,6 +69,8 @@ def main(args=None):
 
 def process_cfg(cfg_file, args):
     import yaml
+    from argparse import Namespace
+    from string import Template
     with open(cfg_file, "r") as infile:
         cfg = yaml.load(infile)
     # Only way to neatly allow cmd-line args to override config and handle
@@ -71,6 +78,20 @@ def process_cfg(cfg_file, args):
     parser = arg_parser()
     parser.set_defaults(**cfg)
     args = parser.parse_args()
+    if args.variables:
+
+        def recursive_replace(value, replacements):
+            if isinstance(value, (tuple, list)):
+                return type(value)([recursive_replace(v, replacements) for v in value])
+            if isinstance(value, dict):
+                return {k: recursive_replace(v, replacements) for k, v in value.items()}
+            if isinstance(value, six.string_types):
+                return Template(value).safe_substitute(replacements)
+                #return value.format(**replacements)
+            return value
+
+        replacements = dict(args.variables)
+        args = Namespace(**recursive_replace(vars(args), replacements))
 
     return args
 
