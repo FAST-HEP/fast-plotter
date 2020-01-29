@@ -39,7 +39,8 @@ def binned_df_dataset_njet():
 
 def test_calculate_error(binned_df_dataset_njet):
     utils.calculate_error(binned_df_dataset_njet)
-    assert all(binned_df_dataset_njet.err == binned_df_dataset_njet.sumw / np.sqrt(binned_df_dataset_njet.n))
+    assert np.allclose(binned_df_dataset_njet.err.values,
+                       binned_df_dataset_njet.sumw.values / np.sqrt(binned_df_dataset_njet.n.values), equal_nan=True)
 
 
 def test_read_binned_df():
