@@ -38,8 +38,12 @@ def binned_df_dataset_njet():
 
 
 def test_calculate_error(binned_df_dataset_njet):
-    utils.calculate_error(binned_df_dataset_njet)
-    assert all(binned_df_dataset_njet.err == np.sqrt(binned_df_dataset_njet.sumw2))
+    df_relative = utils.calculate_error(binned_df_dataset_njet, inplace=False)
+    assert np.allclose(df_relative.err,
+                       np.true_divide(df_relative.sumw, np.sqrt(df_relative.n)), equal_nan=True)
+
+    df_poisson = utils.calculate_error(binned_df_dataset_njet, inplace=False, do_rel_err=False)
+    assert np.allclose(df_poisson.err, np.sqrt(df_poisson.sumw2), equal_nan=True)
 
 
 def test_read_binned_df():
