@@ -73,7 +73,7 @@ def process_cfg(cfg_file, args):
     from argparse import Namespace
     from string import Template
     with open(cfg_file, "r") as infile:
-        cfg = yaml.load(infile)
+        cfg = yaml.safe_load(infile)
     # Only way to neatly allow cmd-line args to override config and handle
     # defaults seems to be:
     parser = arg_parser()
