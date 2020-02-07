@@ -97,8 +97,9 @@ def calculate_error(df, sumw2_label="sumw2", err_label="err", inplace=True, do_r
     for column in df:
         if do_rel_err and column.endswith("sumw"):
             err_name = column.replace("sumw", err_label)
-            df[err_name] = np.true_divide(df[column], root_n)
-            df[err_name][~np.isfinite(df[err_name])] = np.nan
+            errs = np.true_divide(df[column], root_n)
+            errs = np.nan_to_num(errs, copy=False, nan=np.nan, posinf=np.nan, neginf=np.nan)
+            df[err_name] = errs
         elif not do_rel_err and sumw2_label in column:
             err_name = column.replace(sumw2_label, err_label)
             df[err_name] = np.sqrt(df[column])

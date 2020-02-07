@@ -115,7 +115,9 @@ def process_one_file(infile, args):
                                       regex=args.data,
                                       level=args.dataset_col)
                 for col in df_filtered.columns:
-                    df_filtered[col][data_rows] = df["n"][data_rows]
+                    if col == "n":
+                        continue
+                    df_filtered.loc[data_rows, col] = df["n"][data_rows]
             df_filtered.columns = [
                 n.replace(weight + ":", "") for n in df_filtered.columns]
         if hasattr(args, "value_replacements"):
