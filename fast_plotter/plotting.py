@@ -188,9 +188,11 @@ def actually_plot(df, x_axis, y, yerr, kind, label, ax, dataset_col="dataset",
 def standardize_values(x, y_values=[], fill_val=0, expected_xs=None):
     """
     Standardize a set of arrays so they're ready to be plotted directly for matplotlib
+
+    Algorithm:
+    if any requested X values are missing:
+        insert dummy values into X and Y values at the right location
     """
-    # if any requested X values are missing:
-        # insert dummy values into X and Y values at the right location
     if expected_xs is not None:
         x, y_values = add_missing_vals(x, expected_xs, y_values=y_values, fill_val=fill_val)
 
@@ -208,7 +210,7 @@ def replace_infs(x):
     Algorithm: X has +/- inf at an end, replace this X value with +/- the
     previous/next value of X +/- the mean width in X
     """
-    x = x[:] # Make a copy of the array
+    x = x[:]  # Make a copy of the array
     is_left_inf = np.isneginf(x[0])
     is_right_inf = np.isposinf(x[-1])
     width_slice = x[1 if is_left_inf else None:-1 if is_right_inf else None]
@@ -224,7 +226,7 @@ def replace_infs(x):
 
 def add_missing_vals(x, expected_xs, y_values=[], fill_val=0):
     """
-    Check from a list of expected x values, if all occur in x.  If any are missing 
+    Check from a list of expected x values, if all occur in x.  If any are missing
     """
     raise NotImplementedError()
 

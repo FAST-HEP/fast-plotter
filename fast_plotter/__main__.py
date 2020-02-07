@@ -42,6 +42,7 @@ def arg_parser(args=None):
                         help="Scale the MC yields by this lumi")
     parser.add_argument("-y", "--yscale", default="log", choices=["log", "linear"],
                         help="Use this scale for the y-axis")
+
     def split_equals(arg):
         return arg.split("=")
     parser.add_argument("-v", "--variable", dest="variables", action="append", default=[], type=split_equals,
@@ -87,7 +88,6 @@ def process_cfg(cfg_file, args):
                 return {k: recursive_replace(v, replacements) for k, v in value.items()}
             if isinstance(value, six.string_types):
                 return Template(value).safe_substitute(replacements)
-                #return value.format(**replacements)
             return value
 
         replacements = dict(args.variables)
@@ -148,6 +148,7 @@ def dress_main_plots(plots, annotations=[], yscale=None, ylabel=None, legend={},
                     getattr(main_ax, "set_%slim" % axis)(*lims)
             elif lims.endswith("%"):
                 main_ax.margins(**{axis: float(lims[:-1])})
+
 
 def save_plots(infile, weight, plots, outdir, extensions):
     binning, name = decipher_filename(infile)
