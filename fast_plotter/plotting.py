@@ -185,33 +185,61 @@ def actually_plot(df, x_axis, y, yerr, kind, label, ax, dataset_col="dataset",
         raise RuntimeError("Unknown value for 'kind', '{}'".format(kind))
 
 
-def normalize_values(x, y_values=[], fill_val=0):
-    # if X has +/- inf at an end, replace this X value with +/- the previous/next value of X +/- the mean width in X
+def standardize_values(x, y_values=[], fill_val=0, expected_xs=None):
+    """
+    Standardize a set of arrays so they're ready to be plotted directly for matplotlib
+    """
     # if any requested X values are missing:
         # insert dummy values into X and Y values at the right location
-    # insert a dummy entry to X and Y for all arrays
-    if x.dtype.kind not in 'bifc':
-        return (x,) + tuple(y_values)
-    do_pad_left = not np.isneginf(x[0])
-    do_pad_right = not np.isposinf(x[-1])
-    width_slice = x[None if do_pad_left else 1:None if do_pad_right else -1]
+    if expected_xs is not None:
+        x, y_values = add_missing_vals(x, expected_xs, y_values=y_values, fill_val=fill_val)
+
+    if x.dtype.kind in 'bifc':
+        x = replace_infs(x)
+
+        x, y_values = pad_ends(x, y_values=y_values, fill_val=fill_val)
+    return (x,) + tuple(y_values)
+
+
+def replace_infs(x):
+    """
+    Replace (pos or neg) infinities at the ends of an array of floats
+
+    Algorithm: X has +/- inf at an end, replace this X value with +/- the
+    previous/next value of X +/- the mean width in X
+    """
+    x = x[:] # Make a copy of the array
+    is_left_inf = np.isneginf(x[0])
+    is_right_inf = np.isposinf(x[-1])
+    width_slice = x[1 if is_left_inf else None:-1 if is_right_inf else None]
     mean_width = width_slice[0]
     if len(width_slice) > 1:
         mean_width = np.diff(width_slice).mean()
-    x_left_padding = [x[0] - mean_width, x[0]
-                      ] if do_pad_left else [x[1] - mean_width]
-    x_right_padding = [x[-1], x[-1] + mean_width] if do_pad_right else [x[-2] + mean_width]
+    if is_left_inf:
+        x[0] = x[1] - mean_width
+    if is_right_inf:
+        x[-1] = x[-2] + mean_width
+    return x
 
-    x = np.concatenate((x_left_padding, x[1:-1], x_right_padding))
-    new_values = []
-    for y in y_values:
-        y_left_padding = [fill_val, y[1]] if do_pad_left else [fill_val]
-        y_right_padding = [y[-2], fill_val] if do_pad_right else [fill_val]
-        y[np.isnan(y)] = fill_val
-        y = np.concatenate((y_left_padding, y[1:-1], y_right_padding))
-        new_values.append(y)
 
-    return (x,) + tuple(new_values)
+def add_missing_vals(x, expected_xs, y_values=[], fill_val=0):
+    """
+    Check from a list of expected x values, if all occur in x.  If any are missing 
+    """
+    raise NotImplementedError()
+
+
+def pad_ends(x, y_values=[], fill_val=0):
+    """
+    Insert a dummy entry to X and Y for all arrays
+    """
+    mean_width = x[0]
+    if len(x) > 1:
+        mean_width = np.diff(x).mean()
+
+    x = np.concatenate((x[0:1] - mean_width, x, x[-1:] + mean_width), axis=0)
+    new_values = [np.concatenate(([fill_val], y, [fill_val]), axis=0) for y in y_values]
+    return x, tuple(new_values)
 
 
 def plot_1d_many(df, prefix="", data="data", signal=None, dataset_col="dataset",
@@ -365,7 +393,7 @@ def plot_ratio(data, sims, x, y, yerr, ax, error="both", ylim=[0., 2]):
 def draw(ax, method, x, ys, **kwargs):
     fill_val = kwargs.pop("fill_val", 0)
     if x.dtype.kind in 'biufc':
-        values = normalize_values(x, [kwargs[y] for y in ys], fill_val=fill_val)
+        values = standardize_values(x, [kwargs[y] for y in ys], fill_val=fill_val)
         x = values[0]
         new_ys = values[1:]
         kwargs.update(dict(zip(ys, new_ys)))
