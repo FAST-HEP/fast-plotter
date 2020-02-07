@@ -109,7 +109,7 @@ def process_one_file(infile, args):
             df_filtered.rename({weight: "sumw"}, axis="columns", inplace=True)
             df_filtered["sumw2"] = df_filtered.sumw
         else:
-            df_filtered = df.filter(like=weight, axis="columns").copy()
+            df_filtered = df.copy()
             if "n" in df.columns:
                 data_rows = mask_rows(df_filtered,
                                       regex=args.data,
