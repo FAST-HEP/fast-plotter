@@ -142,12 +142,12 @@ def dress_main_plots(plots, annotations=[], yscale=None, ylabel=None, legend={},
         main_ax.grid(True)
         main_ax.set_axisbelow(True)
         for axis, lims in limits.items():
-            lims = map(float, lims)
-            if axis.lower() == "x":
-                main_ax.set_xlim(*lims)
-            if axis.lower() == "y":
-                main_ax.set_ylim(*lims)
-
+            if isinstance(lims, (tuple, list)):
+                lims = map(float, lims)
+                if axis.lower() in "xy":
+                    getattr(main_ax, "set_%slim" % axis)(*lims)
+            elif lims.endswith("%"):
+                main_ax.margins(**{axis: float(lims[:-1])})
 
 def save_plots(infile, weight, plots, outdir, extensions):
     binning, name = decipher_filename(infile)
