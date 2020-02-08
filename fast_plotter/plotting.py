@@ -228,7 +228,13 @@ def add_missing_vals(x, expected_xs, y_values=[], fill_val=0):
     """
     Check from a list of expected x values, if all occur in x.  If any are missing
     """
-    raise NotImplementedError()
+    insert = np.isin(expected_xs, x)
+    new_ys = []
+    for y in y_values:
+        new = np.full_like(expected_xs, fill_val)
+        new[insert] = y
+        new_ys.append(new)
+    return expected_xs[:], new_ys
 
 
 def pad_ends(x, y_values=[], fill_val=0):

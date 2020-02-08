@@ -66,3 +66,15 @@ def test_pad_zero_oneY():
     pad_x, pad_y = plotting.standardize_values(x, [y])
     assert np.array_equal(pad_x, np.arange(0, 5))
     assert np.array_equal(pad_y, expected_y)
+
+
+def test_add_missing_vals():
+    x = np.arange(3)*2
+    expected = np.arange(7)
+    outx, _ = plotting.add_missing_vals(x, expected)
+    assert np.array_equal(outx, expected)
+
+    y = np.arange(3)[::-1] + 1
+    outx, outy = plotting.add_missing_vals(x, expected, y_values=[y])
+    assert np.array_equal(outx, expected)
+    assert np.array_equal(outy[0], [3, 0, 2, 0, 1, 0, 0])
