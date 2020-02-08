@@ -173,7 +173,7 @@ def actually_plot(df, x_axis, y, yerr, kind, label, ax, dataset_col="dataset",
     elif kind == "fill-error-last":
         actually_plot(df, x_axis, y, yerr, "fill", label, ax,
                       dataset_col=dataset_col, colourmap=colourmap, dataset_order=dataset_order)
-        summed = df.unstack(dataset_col)
+        summed = df.unstack(dataset_col).fillna(method="ffill", axis="columns")
         last_dataset = summed.columns.get_level_values(1)[n_datasets - 1]
         summed = summed.xs(last_dataset, level=1, axis="columns")
         x = summed.index.values
