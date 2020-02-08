@@ -78,3 +78,14 @@ def test_add_missing_vals():
     outx, outy = plotting.add_missing_vals(x, expected, y_values=[y])
     assert np.array_equal(outx, expected)
     assert np.array_equal(outy[0], [3, 0, 2, 0, 1, 0, 0])
+    assert outy[0].dtype == y.dtype
+
+    x = np.logspace(0, 10, 11)
+    expected = np.logspace(0, 10, 21)
+    y = np.linspace(1, 100, 11)
+    outx, outy = plotting.add_missing_vals(x, expected, y_values=[y])
+    assert np.array_equal(outx, expected)
+    assert np.array_equal(outy[0][::2], y)
+    assert all(outy[0][1::2] == 0)
+    assert outy[0].dtype == y.dtype
+    assert outx.dtype == expected.dtype
