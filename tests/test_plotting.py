@@ -69,7 +69,7 @@ def test_pad_zero_oneY():
 
 
 def test_add_missing_vals():
-    x = np.arange(3)*2
+    x = np.arange(3) * 2
     expected = np.arange(7)
     outx, _ = plotting.add_missing_vals(x, expected)
     assert np.array_equal(outx, expected)
