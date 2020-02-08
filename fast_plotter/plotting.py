@@ -71,8 +71,9 @@ def plot_all(df, project_1d=True, project_2d=True, data="data", signal=None, dat
 
 class FillColl(object):
     def __init__(self, n_colors=10, ax=None, fill=True, line=True,
-                 colourmap="nipy_spectral", dataset_order=None, linewidth=0.5):
+                 colourmap="nipy_spectral", dataset_order=None, linewidth=0.5, expected_xs=None):
         self.calls = 0
+        self.expected_xs = expected_xs
 
         self.dataset_order = {}
         if dataset_order is not None:
@@ -132,7 +133,7 @@ class FillColl(object):
                 label = col.name
                 width = 2
                 style = "--"
-            draw(ax, "step", x=x, ys=["y"], y=y,
+            draw(ax, "step", x=x, ys=["y"], y=y, expected_xs=self.expected_xs,
                  color=color, linewidth=width, where="mid", label=label, linestyle=style)
         self.calls += 1
 
@@ -155,21 +156,27 @@ def actually_plot(df, x_axis, y, yerr, kind, label, ax, dataset_col="dataset",
         df.reset_index().plot.scatter(x=x_axis, y=y, yerr=yerr,
                                       color="k", label=label, ax=ax, s=13)
         return
+    expected_xs = df.index.unique(x_axis)
     if dataset_order is not None:
         input_datasets = df.index.unique(dataset_col)
         dataset_order = dataset_order + [d for d in input_datasets if d not in dataset_order]
     n_datasets = df.groupby(level=dataset_col).count()
     n_datasets = len(n_datasets[n_datasets != 0])
+
+    vals = df[y].unstack(dataset_col).fillna(method="ffill", axis="columns")
     if kind == "line":
-        filler = FillColl(n_datasets, ax=ax, fill=False, colourmap=colourmap, dataset_order=dataset_order)
-        df[y].unstack(dataset_col).iloc[:, ::-1].apply(filler, axis=0, step="mid")
+        filler = FillColl(n_datasets, ax=ax, fill=False, colourmap=colourmap,
+                          dataset_order=dataset_order, expected_xs=expected_xs)
+        vals.apply(filler, axis=0, step="mid")
         return
     elif kind == "bar":
-        filler = BarColl(n_datasets, ax=ax, colourmap=colourmap, dataset_order=dataset_order)
-        df[y].unstack(dataset_col).iloc[:, ::-1].apply(filler, axis=0, step="mid")
+        filler = BarColl(n_datasets, ax=ax, colourmap=colourmap,
+                         dataset_order=dataset_order, expected_xs=expected_xs)
+        vals.apply(filler, axis=0, step="mid")
     elif kind == "fill":
-        filler = FillColl(n_datasets, ax=ax, colourmap=colourmap, dataset_order=dataset_order, line=False)
-        df[y].unstack(dataset_col).iloc[:, ::-1].apply(filler, axis=0, step="mid")
+        filler = FillColl(n_datasets, ax=ax, colourmap=colourmap, dataset_order=dataset_order,
+                          line=False, expected_xs=expected_xs)
+        vals.iloc[:, ::-1].apply(filler, axis=0, step="mid")
     elif kind == "fill-error-last":
         actually_plot(df, x_axis, y, yerr, "fill", label, ax,
                       dataset_col=dataset_col, colourmap=colourmap, dataset_order=dataset_order)
@@ -180,7 +187,7 @@ def actually_plot(df, x_axis, y, yerr, kind, label, ax, dataset_col="dataset",
         y_down = (summed[y] - summed[yerr]).values
         y_up = (summed[y] + summed[yerr]).values
         draw(ax, "fill_between", x, ys=["y1", "y2"], y2=y_down, y1=y_up,
-             color="gray", step="mid", alpha=0.7)
+             color="gray", step="mid", alpha=0.7, expected_xs=expected_xs)
     else:
         raise RuntimeError("Unknown value for 'kind', '{}'".format(kind))
 
@@ -400,8 +407,10 @@ def plot_ratio(data, sims, x, y, yerr, ax, error="both", ylim=[0., 2]):
 
 def draw(ax, method, x, ys, **kwargs):
     fill_val = kwargs.pop("fill_val", 0)
+    expected_xs = kwargs.pop("expected_xs", None)
     if x.dtype.kind in 'biufc':
-        values = standardize_values(x, [kwargs[y] for y in ys], fill_val=fill_val)
+        values = standardize_values(x, [kwargs[y] for y in ys],
+                                    fill_val=fill_val, expected_xs=expected_xs)
         x = values[0]
         new_ys = values[1:]
         kwargs.update(dict(zip(ys, new_ys)))
