@@ -2,6 +2,7 @@ from . import utils as utils
 from . import statistics as stats
 import traceback
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.colors as mc
 import logging
@@ -241,7 +242,11 @@ def add_missing_vals(x, expected_xs, y_values=[], fill_val=0):
         new = np.full_like(expected_xs, fill_val, dtype=y.dtype)
         new[insert] = y
         new_ys.append(new)
-    return expected_xs[:], new_ys
+    if isinstance(expected_xs, (pd.Index, pd.MultiIndex)):
+        new_x = expected_xs.values
+    else:
+        new_x = expected_xs[:]
+    return new_x, new_ys
 
 
 def pad_ends(x, y_values=[], fill_val=0):
