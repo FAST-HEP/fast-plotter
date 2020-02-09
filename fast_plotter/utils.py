@@ -166,3 +166,10 @@ def rename_index(df, name_replacements):
         return df
     df.index.names = [name_replacements.get(n, n) for n in df.index.names]
     return df
+
+
+def drop_over_underflow(df):
+    index = df.index.to_frame()
+    index = index.select_dtypes(exclude=['object'])
+    good_rows = np.isfinite(index).all(axis=1)
+    return df.loc[good_rows]
