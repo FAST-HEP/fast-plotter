@@ -80,12 +80,14 @@ def test_add_missing_vals():
     assert np.array_equal(outy[0], [3, 0, 2, 0, 1, 0, 0])
     assert outy[0].dtype == y.dtype
 
-    x = np.logspace(0, 10, 11)
-    expected = np.logspace(0, 10, 21)
-    y = np.linspace(1, 100, 11)
-    outx, outy = plotting.add_missing_vals(x, expected, y_values=[y])
+    x = np.logspace(0, 10, 11, dtype=int)
+    expected = np.zeros(22, dtype=int)
+    expected[0::2] = x
+    expected[1::2] = x / 2
+    y = np.linspace(1, 3, 11)
+    outx, (outy,) = plotting.add_missing_vals(x, expected, y_values=[y], fill_val=0)
     assert np.array_equal(outx, expected)
-    assert np.array_equal(outy[0][::2], y)
-    assert all(outy[0][1::2] == 0)
-    assert outy[0].dtype == y.dtype
+    assert np.array_equal(outy[::2], y)
+    assert all(outy[1::2] == 0)
+    assert outy.dtype == y.dtype
     assert outx.dtype == expected.dtype
