@@ -70,51 +70,61 @@ def plot_all(df, project_1d=True, project_2d=True, data="data", signal=None, dat
     return figures, ran_ok
 
 
+class ColorDict():
+    def __init__(self, order=None, named=None, n_colors=10, cmap="nipy_spectral", cmap_start=0.96, cmap_stop=0.2):
+        self.order = {}
+        if order is not None:
+            self.order = {n: i for i, n in enumerate(order)}
+            n_colors = max(n_colors, len(order))
+
+        if isinstance(cmap, str):
+            colmap_def = plt.get_cmap(cmap)
+            n_colors = max(colmap_def.N, n_colors) if colmap_def.N < 256 else n_colors
+        elif isinstance(cmap, dict):
+            colmap_def = plt.get_cmap(cmap.get("map"))
+            n_colors = cmap.get("n_colors", n_colors)
+            cmap_start = cmap.get("colour_start", cmap_start)
+            cmap_stop = cmap.get("colour_stop", cmap_stop)
+
+        self.defaults = [colmap_def(i) for i in np.linspace(cmap_start, cmap_stop, n_colors)]
+        self.named = named if named is not None else {}
+
+    def get_colour(self, index=None, name=None):
+        if index is None and name is None:
+            raise RuntimeError("'Index' and 'name' cannot both be None")
+
+        if name in self.named:
+            return self.named[name]
+
+        if name in self.order:
+            return self.defaults[self.order[name]]
+
+        if index is None:
+            raise RuntimeError("'index' was not provided and we got an unknown named object '%s'" % name)
+
+        return self.defaults[index]
+
+
 class FillColl(object):
-    def __init__(self, n_colors=10, ax=None, fill=True, line=True,
+    def __init__(self, n_colors=10, ax=None, fill=True, line=True, dataset_colours=None,
                  colourmap="nipy_spectral", dataset_order=None, linewidth=0.5, expected_xs=None):
         self.calls = 0
         self.expected_xs = expected_xs
-
-        self.dataset_order = {}
-        if dataset_order is not None:
-            self.dataset_order = {n: i for i, n in enumerate(dataset_order)}
-            n_colors = max(n_colors, len(dataset_order))
-
-        colour_start = 0.96
-        colour_stop = 0.2
-        # darken = None
-        if isinstance(colourmap, str):
-            colmap_def = plt.get_cmap(colourmap)
-            n_colors = max(colmap_def.N, n_colors) if colmap_def.N < 256 else n_colors
-        elif isinstance(colourmap, dict):
-            colmap_def = plt.get_cmap(colourmap.get("map"))
-            n_colors = colourmap.get("n_colors", n_colors)
-            colour_start = colourmap.get("colour_start", colour_start)
-            colour_stop = colourmap.get("colour_stop", colour_stop)
-        if not fill:
-            # colmap_def = plt.get_cmap("Pastel1")
-            # darken = 0.02
-            pass
-
-        self.colors = [colmap_def(i)
-                       for i in np.linspace(colour_start, colour_stop, n_colors)]
+        self.colors = ColorDict(n_colors=n_colors, order=dataset_order,
+                                named=dataset_colours, cmap=colourmap)
 
         self.ax = ax
         self.fill = fill
         self.line = line
         self.linewidth = linewidth
 
-    def pre_call(self, col):
+    def pre_call(self, column):
         ax = self.ax
         if not ax:
             ax = plt.gca()
-        index = self.calls
-        if self.dataset_order:
-            index = self.dataset_order.get(col.name, index)
-        color = self.colors[index]
-        x = col.index.values
-        y = col.values
+        color = self.colors.get_colour(index=self.calls, name=column.name)
+        x = column.index.values
+        y = column.values
         return ax, x, y, color
 
     def __call__(self, col, **kwargs):
@@ -152,7 +162,7 @@ class BarColl(FillColl):
 
 
 def actually_plot(df, x_axis, y, yerr, kind, label, ax, dataset_col="dataset",
-                  colourmap="nipy_spectral", dataset_order=None):
+                  dataset_colours=None, colourmap="nipy_spectral", dataset_order=None):
     if kind == "scatter":
         df.reset_index().plot.scatter(x=x_axis, y=y, yerr=yerr,
                                       color="k", label=label, ax=ax, s=13)
@@ -167,6 +177,7 @@ def actually_plot(df, x_axis, y, yerr, kind, label, ax, dataset_col="dataset",
     vals = df[y].unstack(dataset_col).fillna(method="ffill", axis="columns")
     if kind == "line":
         filler = FillColl(n_datasets, ax=ax, fill=False, colourmap=colourmap,
+                          dataset_colours=dataset_colours,
                           dataset_order=dataset_order, expected_xs=expected_xs)
         vals.apply(filler, axis=0, step="mid")
         return
@@ -175,11 +186,13 @@ def actually_plot(df, x_axis, y, yerr, kind, label, ax, dataset_col="dataset",
                          dataset_order=dataset_order, expected_xs=expected_xs)
         vals.apply(filler, axis=0, step="mid")
     elif kind == "fill":
-        filler = FillColl(n_datasets, ax=ax, colourmap=colourmap, dataset_order=dataset_order,
+        filler = FillColl(n_datasets, ax=ax, colourmap=colourmap,
+                          dataset_colours=dataset_colours,
+                          dataset_order=dataset_order,
                           line=False, expected_xs=expected_xs)
         vals.iloc[:, ::-1].apply(filler, axis=0, step="mid")
     elif kind == "fill-error-last":
-        actually_plot(df, x_axis, y, yerr, "fill", label, ax,
+        actually_plot(df, x_axis, y, yerr, "fill", label, ax, dataset_colours=dataset_colours,
                       dataset_col=dataset_col, colourmap=colourmap, dataset_order=dataset_order)
         summed = df.unstack(dataset_col).fillna(method="ffill", axis="columns")
         last_dataset = summed.columns.get_level_values(1)[n_datasets - 1]
@@ -266,7 +279,8 @@ def plot_1d_many(df, prefix="", data="data", signal=None, dataset_col="dataset",
                  plot_sims="stack", plot_data="sum", plot_signal=None,
                  kind_data="scatter", kind_sims="fill-error-last", kind_signal="line",
                  scale_sims=None, summary="ratio-error-both", colourmap="nipy_spectral",
-                 dataset_order=None, figsize=(5, 6), no_over_underflow=True, **kwargs):
+                 dataset_order=None, figsize=(5, 6), no_over_underflow=True,
+                 dataset_colours=None, **kwargs):
     y = "sumw"
     yvar = "sumw2"
     yerr = "err"
@@ -317,6 +331,7 @@ def plot_1d_many(df, prefix="", data="data", signal=None, dataset_col="dataset",
         merged = _merge_datasets(df, combine, dataset_col, param_name=var_name)
         actually_plot(merged, x_axis=x_axis, y=y, yerr=yerr, kind=style,
                       label=label, ax=main_ax, dataset_col=dataset_col,
+                      dataset_colours=dataset_colours,
                       colourmap=colourmap, dataset_order=dataset_order)
     main_ax.set_xlabel(x_axis)
 
