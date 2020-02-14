@@ -108,7 +108,7 @@ class ColorDict():
 class FillColl(object):
     def __init__(self, n_colors=10, ax=None, fill=True, line=True, dataset_colours=None,
                  colourmap="nipy_spectral", dataset_order=None, linewidth=0.5, expected_xs=None):
-        self.calls = 0
+        self.calls = -1
         self.expected_xs = expected_xs
         self.colors = ColorDict(n_colors=n_colors, order=dataset_order,
                                 named=dataset_colours, cmap=colourmap)
@@ -131,7 +131,7 @@ class FillColl(object):
         ax, x, y, color = self.pre_call(col)
         if self.fill:
             draw(ax, "fill_between", x=x, ys=["y1"],
-                 y1=y, label=col.name,
+                 y1=y, label=col.name, expected_xs=self.expected_xs,
                  linewidth=0, color=color, **kwargs)
         if self.line:
             if self.fill:
@@ -167,7 +167,7 @@ def actually_plot(df, x_axis, y, yerr, kind, label, ax, dataset_col="dataset",
         df.reset_index().plot.scatter(x=x_axis, y=y, yerr=yerr,
                                       color="k", label=label, ax=ax, s=13)
         return
-    expected_xs = df.index.unique(x_axis)
+    expected_xs = df.index.unique(x_axis).values
     if dataset_order is not None:
         input_datasets = df.index.unique(dataset_col)
         dataset_order = dataset_order + [d for d in input_datasets if d not in dataset_order]
@@ -258,7 +258,7 @@ def add_missing_vals(x, expected_xs, y_values=[], fill_val=0):
     if isinstance(expected_xs, (pd.Index, pd.MultiIndex)):
         new_x = expected_xs.values
     else:
-        new_x = expected_xs[:]
+        new_x = expected_xs.copy()
     return new_x, new_ys
 
 
