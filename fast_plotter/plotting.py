@@ -280,7 +280,7 @@ def plot_1d_many(df, prefix="", data="data", signal=None, dataset_col="dataset",
                  kind_data="scatter", kind_sims="fill-error-last", kind_signal="line",
                  scale_sims=None, summary="ratio-error-both", colourmap="nipy_spectral",
                  dataset_order=None, figsize=(5, 6), show_over_underflow=False,
-                 dataset_colours=None, **kwargs):
+                 dataset_colours=None, err_from_sumw2=False, **kwargs):
     y = "sumw"
     yvar = "sumw2"
     yerr = "err"
@@ -328,7 +328,7 @@ def plot_1d_many(df, prefix="", data="data", signal=None, dataset_col="dataset",
     for df, combine, style, label, var_name in config:
         if df is None or len(df) == 0:
             continue
-        merged = _merge_datasets(df, combine, dataset_col, param_name=var_name)
+        merged = _merge_datasets(df, combine, dataset_col, param_name=var_name, err_from_sumw2=err_from_sumw2)
         actually_plot(merged, x_axis=x_axis, y=y, yerr=yerr, kind=style,
                       label=label, ax=main_ax, dataset_col=dataset_col,
                       dataset_colours=dataset_colours,
@@ -343,9 +343,9 @@ def plot_1d_many(df, prefix="", data="data", signal=None, dataset_col="dataset",
     if summary.startswith("ratio"):
         main_ax.set_xlabel("")
         summed_data = _merge_datasets(
-            in_df_data, "sum", dataset_col=dataset_col)
+            in_df_data, "sum", dataset_col=dataset_col, err_from_sumw2=err_from_sumw2)
         summed_sims = _merge_datasets(
-            in_df_sims, "sum", dataset_col=dataset_col)
+            in_df_sims, "sum", dataset_col=dataset_col, err_from_sumw2=err_from_sumw2)
         if summary == "ratio-error-both":
             error = "both"
         elif summary == "ratio-error-markers":
@@ -361,13 +361,13 @@ def plot_1d_many(df, prefix="", data="data", signal=None, dataset_col="dataset",
     return main_ax, summary_ax
 
 
-def _merge_datasets(df, style, dataset_col, param_name="_merge_datasets"):
+def _merge_datasets(df, style, dataset_col, param_name="_merge_datasets", err_from_sumw2=False):
     if style == "stack":
-        utils.calculate_error(df)
+        utils.calculate_error(df, do_rel_err=not err_from_sumw2)
         df = utils.stack_datasets(df, dataset_level=dataset_col)
     elif style == "sum":
         df = utils.sum_over_datasets(df, dataset_level=dataset_col)
-        utils.calculate_error(df)
+        utils.calculate_error(df, do_rel_err=not err_from_sumw2)
     elif style:
         msg = "'{}' must be either 'sum', 'stack' or None. Got {}"
         raise RuntimeError(msg.format(param_name, style))
