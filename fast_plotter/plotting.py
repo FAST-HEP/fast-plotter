@@ -279,7 +279,7 @@ def plot_1d_many(df, prefix="", data="data", signal=None, dataset_col="dataset",
                  plot_sims="stack", plot_data="sum", plot_signal=None,
                  kind_data="scatter", kind_sims="fill-error-last", kind_signal="line",
                  scale_sims=None, summary="ratio-error-both", colourmap="nipy_spectral",
-                 dataset_order=None, figsize=(5, 6), no_over_underflow=True,
+                 dataset_order=None, figsize=(5, 6), show_over_underflow=False,
                  dataset_colours=None, **kwargs):
     y = "sumw"
     yvar = "sumw2"
@@ -290,7 +290,7 @@ def plot_1d_many(df, prefix="", data="data", signal=None, dataset_col="dataset",
         yerr = prefix + ":" + yerr
 
     df = utils.convert_intervals(df, to="mid")
-    if no_over_underflow:
+    if not show_over_underflow:
         df = utils.drop_over_underflow(df)
     in_df_data, in_df_sims = utils.split_data_sims(
         df, data_labels=data, dataset_level=dataset_col)
