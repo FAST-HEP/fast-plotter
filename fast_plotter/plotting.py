@@ -2,6 +2,7 @@ from . import utils as utils
 from . import statistics as stats
 import traceback
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.colors as mc
 import logging
@@ -69,57 +70,68 @@ def plot_all(df, project_1d=True, project_2d=True, data="data", signal=None, dat
     return figures, ran_ok
 
 
-class FillColl(object):
-    def __init__(self, n_colors=10, ax=None, fill=True, line=True,
-                 colourmap="nipy_spectral", dataset_order=None, linewidth=0.5):
-        self.calls = 0
+class ColorDict():
+    def __init__(self, order=None, named=None, n_colors=10, cmap="nipy_spectral", cmap_start=0.96, cmap_stop=0.2):
+        self.order = {}
+        if order is not None:
+            self.order = {n: i for i, n in enumerate(order)}
+            n_colors = max(n_colors, len(order))
 
-        self.dataset_order = {}
-        if dataset_order is not None:
-            self.dataset_order = {n: i for i, n in enumerate(dataset_order)}
-            n_colors = max(n_colors, len(dataset_order))
-
-        colour_start = 0.96
-        colour_stop = 0.2
-        # darken = None
-        if isinstance(colourmap, str):
-            colmap_def = plt.get_cmap(colourmap)
+        if isinstance(cmap, str):
+            colmap_def = plt.get_cmap(cmap)
             n_colors = max(colmap_def.N, n_colors) if colmap_def.N < 256 else n_colors
-        elif isinstance(colourmap, dict):
-            colmap_def = plt.get_cmap(colourmap.get("map"))
-            n_colors = colourmap.get("n_colors", n_colors)
-            colour_start = colourmap.get("colour_start", colour_start)
-            colour_stop = colourmap.get("colour_stop", colour_stop)
-        if not fill:
-            # colmap_def = plt.get_cmap("Pastel1")
-            # darken = 0.02
-            pass
+        elif isinstance(cmap, dict):
+            colmap_def = plt.get_cmap(cmap.get("map"))
+            n_colors = cmap.get("n_colors", n_colors)
+            cmap_start = cmap.get("colour_start", cmap_start)
+            cmap_stop = cmap.get("colour_stop", cmap_stop)
 
-        self.colors = [colmap_def(i)
-                       for i in np.linspace(colour_start, colour_stop, n_colors)]
+        self.defaults = [colmap_def(i) for i in np.linspace(cmap_start, cmap_stop, n_colors)]
+        self.named = named if named is not None else {}
+
+    def get_colour(self, index=None, name=None):
+        if index is None and name is None:
+            raise RuntimeError("'Index' and 'name' cannot both be None")
+
+        if name in self.named:
+            return self.named[name]
+
+        if name in self.order:
+            return self.defaults[self.order[name]]
+
+        if index is None:
+            raise RuntimeError("'index' was not provided and we got an unknown named object '%s'" % name)
+
+        return self.defaults[index]
+
+
+class FillColl(object):
+    def __init__(self, n_colors=10, ax=None, fill=True, line=True, dataset_colours=None,
+                 colourmap="nipy_spectral", dataset_order=None, linewidth=0.5, expected_xs=None):
+        self.calls = -1
+        self.expected_xs = expected_xs
+        self.colors = ColorDict(n_colors=n_colors, order=dataset_order,
+                                named=dataset_colours, cmap=colourmap)
 
         self.ax = ax
         self.fill = fill
         self.line = line
         self.linewidth = linewidth
 
-    def pre_call(self, col):
+    def pre_call(self, column):
         ax = self.ax
         if not ax:
             ax = plt.gca()
-        index = self.calls
-        if self.dataset_order:
-            index = self.dataset_order.get(col.name, index)
-        color = self.colors[index]
-        x = col.index.values
-        y = col.values
+        color = self.colors.get_colour(index=self.calls, name=column.name)
+        x = column.index.values
+        y = column.values
         return ax, x, y, color
 
     def __call__(self, col, **kwargs):
         ax, x, y, color = self.pre_call(col)
         if self.fill:
             draw(ax, "fill_between", x=x, ys=["y1"],
-                 y1=y, label=col.name,
+                 y1=y, label=col.name, expected_xs=self.expected_xs,
                  linewidth=0, color=color, **kwargs)
         if self.line:
             if self.fill:
@@ -132,7 +144,7 @@ class FillColl(object):
                 label = col.name
                 width = 2
                 style = "--"
-            draw(ax, "step", x=x, ys=["y"], y=y,
+            draw(ax, "step", x=x, ys=["y"], y=y, expected_xs=self.expected_xs,
                  color=color, linewidth=width, where="mid", label=label, linestyle=style)
         self.calls += 1
 
@@ -150,71 +162,126 @@ class BarColl(FillColl):
 
 
 def actually_plot(df, x_axis, y, yerr, kind, label, ax, dataset_col="dataset",
-                  colourmap="nipy_spectral", dataset_order=None):
+                  dataset_colours=None, colourmap="nipy_spectral", dataset_order=None):
+    expected_xs = df.index.unique(x_axis).values
     if kind == "scatter":
-        df.reset_index().plot.scatter(x=x_axis, y=y, yerr=yerr,
-                                      color="k", label=label, ax=ax, s=13)
+        draw(ax, "errorbar", x=df.reset_index()[x_axis], ys=["y", "yerr"], y=df[y], yerr=df[yerr],
+             color="k", ms=3.5, fmt="o", label=label, expected_xs=expected_xs, add_ends=False)
         return
     if dataset_order is not None:
         input_datasets = df.index.unique(dataset_col)
         dataset_order = dataset_order + [d for d in input_datasets if d not in dataset_order]
     n_datasets = df.groupby(level=dataset_col).count()
     n_datasets = len(n_datasets[n_datasets != 0])
+
+    vals = df[y].unstack(dataset_col).fillna(method="ffill", axis="columns")
     if kind == "line":
-        filler = FillColl(n_datasets, ax=ax, fill=False, colourmap=colourmap, dataset_order=dataset_order)
-        df[y].unstack(dataset_col).iloc[:, ::-1].apply(filler, axis=0, step="mid")
+        filler = FillColl(n_datasets, ax=ax, fill=False, colourmap=colourmap,
+                          dataset_colours=dataset_colours,
+                          dataset_order=dataset_order, expected_xs=expected_xs)
+        vals.apply(filler, axis=0, step="mid")
         return
     elif kind == "bar":
-        filler = BarColl(n_datasets, ax=ax, colourmap=colourmap, dataset_order=dataset_order)
-        df[y].unstack(dataset_col).iloc[:, ::-1].apply(filler, axis=0, step="mid")
+        filler = BarColl(n_datasets, ax=ax, colourmap=colourmap,
+                         dataset_order=dataset_order, expected_xs=expected_xs)
+        vals.apply(filler, axis=0, step="mid")
     elif kind == "fill":
-        filler = FillColl(n_datasets, ax=ax, colourmap=colourmap, dataset_order=dataset_order, line=False)
-        df[y].unstack(dataset_col).iloc[:, ::-1].apply(filler, axis=0, step="mid")
+        filler = FillColl(n_datasets, ax=ax, colourmap=colourmap,
+                          dataset_colours=dataset_colours,
+                          dataset_order=dataset_order,
+                          line=False, expected_xs=expected_xs)
+        vals.iloc[:, ::-1].apply(filler, axis=0, step="mid")
     elif kind == "fill-error-last":
-        actually_plot(df, x_axis, y, yerr, "fill", label, ax,
+        actually_plot(df, x_axis, y, yerr, "fill", label, ax, dataset_colours=dataset_colours,
                       dataset_col=dataset_col, colourmap=colourmap, dataset_order=dataset_order)
-        summed = df.unstack(dataset_col)
+        summed = df.unstack(dataset_col).fillna(method="ffill", axis="columns")
         last_dataset = summed.columns.get_level_values(1)[n_datasets - 1]
         summed = summed.xs(last_dataset, level=1, axis="columns")
         x = summed.index.values
         y_down = (summed[y] - summed[yerr]).values
         y_up = (summed[y] + summed[yerr]).values
         draw(ax, "fill_between", x, ys=["y1", "y2"], y2=y_down, y1=y_up,
-             color="gray", step="mid", alpha=0.7)
+             color="gray", step="mid", alpha=0.7, expected_xs=expected_xs)
     else:
         raise RuntimeError("Unknown value for 'kind', '{}'".format(kind))
 
 
-def pad_zero(x, y_values=[], fill_val=0):
-    if x.dtype.kind not in 'bifc':
-        return (x,) + tuple(y_values)
-    do_pad_left = not np.isneginf(x[0])
-    do_pad_right = not np.isposinf(x[-1])
-    width_slice = x[None if do_pad_left else 1:None if do_pad_right else -1]
+def standardize_values(x, y_values=[], fill_val=0, expected_xs=None, add_ends=True):
+    """
+    Standardize a set of arrays so they're ready to be plotted directly for matplotlib
+
+    Algorithm:
+    if any requested X values are missing:
+        insert dummy values into X and Y values at the right location
+    """
+    if expected_xs is not None:
+        x, y_values = add_missing_vals(x, expected_xs, y_values=y_values, fill_val=fill_val)
+
+    if x.dtype.kind in 'bifc':
+        x = replace_infs(x)
+
+        if add_ends:
+            x, y_values = pad_ends(x, y_values=y_values, fill_val=fill_val)
+    return (x,) + tuple(y_values)
+
+
+def replace_infs(x):
+    """
+    Replace (pos or neg) infinities at the ends of an array of floats
+
+    Algorithm: X has +/- inf at an end, replace this X value with +/- the
+    previous/next value of X +/- the mean width in X
+    """
+    x = x[:]  # Make a copy of the array
+    is_left_inf = np.isneginf(x[0])
+    is_right_inf = np.isposinf(x[-1])
+    width_slice = x[1 if is_left_inf else None:-1 if is_right_inf else None]
     mean_width = width_slice[0]
     if len(width_slice) > 1:
         mean_width = np.diff(width_slice).mean()
-    x_left_padding = [x[0] - mean_width, x[0]
-                      ] if do_pad_left else [x[1] - mean_width]
-    x_right_padding = [x[-1], x[-1] + mean_width] if do_pad_right else [x[-2] + mean_width]
+    if is_left_inf:
+        x[0] = x[1] - mean_width
+    if is_right_inf:
+        x[-1] = x[-2] + mean_width
+    return x
 
-    x = np.concatenate((x_left_padding, x[1:-1], x_right_padding))
-    new_values = []
+
+def add_missing_vals(x, expected_xs, y_values=[], fill_val=0):
+    """
+    Check from a list of expected x values, if all occur in x.  If any are missing
+    """
+    insert = np.isin(expected_xs, x)
+    new_ys = []
     for y in y_values:
-        y_left_padding = [fill_val, y[1]] if do_pad_left else [fill_val]
-        y_right_padding = [y[-2], fill_val] if do_pad_right else [fill_val]
-        y[np.isnan(y)] = fill_val
-        y = np.concatenate((y_left_padding, y[1:-1], y_right_padding))
-        new_values.append(y)
+        new = np.full_like(expected_xs, fill_val, dtype=y.dtype)
+        new[insert] = y
+        new_ys.append(new)
+    if isinstance(expected_xs, (pd.Index, pd.MultiIndex)):
+        new_x = expected_xs.values
+    else:
+        new_x = expected_xs.copy()
+    return new_x, new_ys
 
-    return (x,) + tuple(new_values)
+
+def pad_ends(x, y_values=[], fill_val=0):
+    """
+    Insert a dummy entry to X and Y for all arrays
+    """
+    mean_width = x[0]
+    if len(x) > 1:
+        mean_width = np.diff(x).mean()
+
+    x = np.concatenate((x[0:1] - mean_width, x, x[-1:] + mean_width), axis=0)
+    new_values = [np.concatenate(([fill_val], y, [fill_val]), axis=0) for y in y_values]
+    return x, tuple(new_values)
 
 
 def plot_1d_many(df, prefix="", data="data", signal=None, dataset_col="dataset",
                  plot_sims="stack", plot_data="sum", plot_signal=None,
                  kind_data="scatter", kind_sims="fill-error-last", kind_signal="line",
                  scale_sims=None, summary="ratio-error-both", colourmap="nipy_spectral",
-                 dataset_order=None, figsize=(5, 6), **kwargs):
+                 dataset_order=None, figsize=(5, 6), show_over_underflow=False,
+                 dataset_colours=None, err_from_sumw2=False, **kwargs):
     y = "sumw"
     yvar = "sumw2"
     yerr = "err"
@@ -224,6 +291,8 @@ def plot_1d_many(df, prefix="", data="data", signal=None, dataset_col="dataset",
         yerr = prefix + ":" + yerr
 
     df = utils.convert_intervals(df, to="mid")
+    if not show_over_underflow:
+        df = utils.drop_over_underflow(df)
     in_df_data, in_df_sims = utils.split_data_sims(
         df, data_labels=data, dataset_level=dataset_col)
     if scale_sims is not None:
@@ -260,9 +329,10 @@ def plot_1d_many(df, prefix="", data="data", signal=None, dataset_col="dataset",
     for df, combine, style, label, var_name in config:
         if df is None or len(df) == 0:
             continue
-        merged = _merge_datasets(df, combine, dataset_col, param_name=var_name)
+        merged = _merge_datasets(df, combine, dataset_col, param_name=var_name, err_from_sumw2=err_from_sumw2)
         actually_plot(merged, x_axis=x_axis, y=y, yerr=yerr, kind=style,
                       label=label, ax=main_ax, dataset_col=dataset_col,
+                      dataset_colours=dataset_colours,
                       colourmap=colourmap, dataset_order=dataset_order)
     main_ax.set_xlabel(x_axis)
 
@@ -274,9 +344,9 @@ def plot_1d_many(df, prefix="", data="data", signal=None, dataset_col="dataset",
     if summary.startswith("ratio"):
         main_ax.set_xlabel("")
         summed_data = _merge_datasets(
-            in_df_data, "sum", dataset_col=dataset_col)
+            in_df_data, "sum", dataset_col=dataset_col, err_from_sumw2=err_from_sumw2)
         summed_sims = _merge_datasets(
-            in_df_sims, "sum", dataset_col=dataset_col)
+            in_df_sims, "sum", dataset_col=dataset_col, err_from_sumw2=err_from_sumw2)
         if summary == "ratio-error-both":
             error = "both"
         elif summary == "ratio-error-markers":
@@ -292,13 +362,13 @@ def plot_1d_many(df, prefix="", data="data", signal=None, dataset_col="dataset",
     return main_ax, summary_ax
 
 
-def _merge_datasets(df, style, dataset_col, param_name="_merge_datasets"):
+def _merge_datasets(df, style, dataset_col, param_name="_merge_datasets", err_from_sumw2=False):
     if style == "stack":
-        utils.calculate_error(df)
+        utils.calculate_error(df, do_rel_err=not err_from_sumw2)
         df = utils.stack_datasets(df, dataset_level=dataset_col)
     elif style == "sum":
         df = utils.sum_over_datasets(df, dataset_level=dataset_col)
-        utils.calculate_error(df)
+        utils.calculate_error(df, do_rel_err=not err_from_sumw2)
     elif style:
         msg = "'{}' must be either 'sum', 'stack' or None. Got {}"
         raise RuntimeError(msg.format(param_name, style))
@@ -324,9 +394,8 @@ def plot_1d(df, kind="line", yscale="lin"):
 
 
 def plot_ratio(data, sims, x, y, yerr, ax, error="both", ylim=[0., 2]):
-    # make sure both sides agree with the binning and drop all infinities
+    # make sure both sides agree with the binning
     merged = data.join(sims, how="left", lsuffix="data", rsuffix="sims")
-    merged.drop([np.inf, -np.inf], inplace=True, errors="ignore")
     data = merged.filter(like="data", axis="columns").fillna(0)
     data.columns = [col.replace("data", "") for col in data.columns]
     sims = merged.filter(like="sims", axis="columns")
@@ -338,17 +407,22 @@ def plot_ratio(data, sims, x, y, yerr, ax, error="both", ylim=[0., 2]):
 
     if error == "markers":
         central, lower, upper = stats.try_root_ratio_plot(d, d_err, s, s_err)
+        x_axis, central, lower, upper = standardize_values(x_axis, y_values=(central, lower, upper), add_ends=False)
         mask = (central != 0) & (lower != 0)
         ax.errorbar(x=x_axis[mask], y=central[mask], yerr=(lower[mask], upper[mask]),
                     fmt="o", markersize=4, color="k")
 
     elif error == "both":
-        rel_d_err = (d_err / d)
+        ratio = d / s
+        rel_d_err = (d_err / s)
         rel_s_err = (s_err / s)
 
-        ax.errorbar(x=x_axis.values, y=d / s, yerr=rel_d_err, fmt="o", markersize=4, color="k")
-        draw(ax, "fill_between", x_axis.values, ys=["y1", "y2"],
-             y2=1 + rel_s_err.values, y1=1 - rel_s_err.values, fill_val=1,
+        vals = standardize_values(x_axis.values, y_values=[ratio, rel_s_err, rel_d_err], add_ends=False)
+        x_axis, ratio, rel_s_err, rel_d_err = vals
+
+        ax.errorbar(x=x_axis, y=ratio, yerr=rel_d_err, fmt="o", markersize=4, color="k")
+        draw(ax, "fill_between", x_axis, ys=["y1", "y2"],
+             y2=1 + rel_s_err, y1=1 - rel_s_err, fill_val=1,
              color="gray", step="mid", alpha=0.7)
 
     ax.set_ylim(ylim)
@@ -360,8 +434,13 @@ def plot_ratio(data, sims, x, y, yerr, ax, error="both", ylim=[0., 2]):
 
 def draw(ax, method, x, ys, **kwargs):
     fill_val = kwargs.pop("fill_val", 0)
+    expected_xs = kwargs.pop("expected_xs", None)
+    add_ends = kwargs.pop("add_ends", True)
     if x.dtype.kind in 'biufc':
-        values = pad_zero(x, [kwargs[y] for y in ys], fill_val=fill_val)
+        values = standardize_values(x, [kwargs[y] for y in ys],
+                                    fill_val=fill_val,
+                                    add_ends=add_ends,
+                                    expected_xs=expected_xs)
         x = values[0]
         new_ys = values[1:]
         kwargs.update(dict(zip(ys, new_ys)))

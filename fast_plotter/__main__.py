@@ -2,6 +2,7 @@
 Turn them tables into plots
 """
 import os
+import six
 import logging
 import matplotlib
 matplotlib.use('Agg')
@@ -41,6 +42,11 @@ def arg_parser(args=None):
                         help="Scale the MC yields by this lumi")
     parser.add_argument("-y", "--yscale", default="log", choices=["log", "linear"],
                         help="Use this scale for the y-axis")
+
+    def split_equals(arg):
+        return arg.split("=")
+    parser.add_argument("-v", "--variable", dest="variables", action="append", default=[], type=split_equals,
+                        help="Define a variable to expand in the config file")
     parser.add_argument("--halt-errors", dest="continue_errors", default=True, action="store_false",
                         help="Stop at the first time an error occurs")
     return parser
@@ -64,13 +70,28 @@ def main(args=None):
 
 def process_cfg(cfg_file, args):
     import yaml
+    from argparse import Namespace
+    from string import Template
     with open(cfg_file, "r") as infile:
-        cfg = yaml.load(infile)
+        cfg = yaml.safe_load(infile)
     # Only way to neatly allow cmd-line args to override config and handle
     # defaults seems to be:
     parser = arg_parser()
     parser.set_defaults(**cfg)
     args = parser.parse_args()
+    if args.variables:
+
+        def recursive_replace(value, replacements):
+            if isinstance(value, (tuple, list)):
+                return type(value)([recursive_replace(v, replacements) for v in value])
+            if isinstance(value, dict):
+                return {k: recursive_replace(v, replacements) for k, v in value.items()}
+            if isinstance(value, six.string_types):
+                return Template(value).safe_substitute(replacements)
+            return value
+
+        replacements = dict(args.variables)
+        args = Namespace(**recursive_replace(vars(args), replacements))
 
     return args
 
@@ -94,7 +115,9 @@ def process_one_file(infile, args):
                                       regex=args.data,
                                       level=args.dataset_col)
                 for col in df_filtered.columns:
-                    df_filtered[col][data_rows] = df["n"][data_rows]
+                    if col == "n":
+                        continue
+                    df_filtered.loc[data_rows, col] = df["n"][data_rows]
             df_filtered.columns = [
                 n.replace(weight + ":", "") for n in df_filtered.columns]
         if hasattr(args, "value_replacements"):
@@ -121,11 +144,12 @@ def dress_main_plots(plots, annotations=[], yscale=None, ylabel=None, legend={},
         main_ax.grid(True)
         main_ax.set_axisbelow(True)
         for axis, lims in limits.items():
-            lims = map(float, lims)
-            if axis.lower() == "x":
-                main_ax.set_xlim(*lims)
-            if axis.lower() == "y":
-                main_ax.set_ylim(*lims)
+            if isinstance(lims, (tuple, list)):
+                lims = map(float, lims)
+                if axis.lower() in "xy":
+                    getattr(main_ax, "set_%slim" % axis)(*lims)
+            elif lims.endswith("%"):
+                main_ax.margins(**{axis: float(lims[:-1])})
 
 
 def save_plots(infile, weight, plots, outdir, extensions):
