@@ -166,7 +166,7 @@ def actually_plot(df, x_axis, y, yerr, kind, label, ax, dataset_col="dataset",
     expected_xs = df.index.unique(x_axis).values
     if kind == "scatter":
         draw(ax, "errorbar", x=df.reset_index()[x_axis], ys=["y", "yerr"], y=df[y], yerr=df[yerr],
-             color="k", ms=3.5, fmt="o", label=label, expected_xs=expected_xs)
+             color="k", ms=3.5, fmt="o", label=label, expected_xs=expected_xs, add_ends=False)
         return
     if dataset_order is not None:
         input_datasets = df.index.unique(dataset_col)
@@ -206,7 +206,7 @@ def actually_plot(df, x_axis, y, yerr, kind, label, ax, dataset_col="dataset",
         raise RuntimeError("Unknown value for 'kind', '{}'".format(kind))
 
 
-def standardize_values(x, y_values=[], fill_val=0, expected_xs=None):
+def standardize_values(x, y_values=[], fill_val=0, expected_xs=None, add_ends=True):
     """
     Standardize a set of arrays so they're ready to be plotted directly for matplotlib
 
@@ -220,7 +220,8 @@ def standardize_values(x, y_values=[], fill_val=0, expected_xs=None):
     if x.dtype.kind in 'bifc':
         x = replace_infs(x)
 
-        x, y_values = pad_ends(x, y_values=y_values, fill_val=fill_val)
+        if add_ends:
+            x, y_values = pad_ends(x, y_values=y_values, fill_val=fill_val)
     return (x,) + tuple(y_values)
 
 
@@ -393,9 +394,8 @@ def plot_1d(df, kind="line", yscale="lin"):
 
 
 def plot_ratio(data, sims, x, y, yerr, ax, error="both", ylim=[0., 2]):
-    # make sure both sides agree with the binning and drop all infinities
+    # make sure both sides agree with the binning
     merged = data.join(sims, how="left", lsuffix="data", rsuffix="sims")
-    merged.drop([np.inf, -np.inf], inplace=True, errors="ignore")
     data = merged.filter(like="data", axis="columns").fillna(0)
     data.columns = [col.replace("data", "") for col in data.columns]
     sims = merged.filter(like="sims", axis="columns")
@@ -407,17 +407,21 @@ def plot_ratio(data, sims, x, y, yerr, ax, error="both", ylim=[0., 2]):
 
     if error == "markers":
         central, lower, upper = stats.try_root_ratio_plot(d, d_err, s, s_err)
+        x_axis, central, lower, upper = standardize_values(x_axis, y_values=(central, lower, upper), add_ends=False)
         mask = (central != 0) & (lower != 0)
         ax.errorbar(x=x_axis[mask], y=central[mask], yerr=(lower[mask], upper[mask]),
                     fmt="o", markersize=4, color="k")
 
     elif error == "both":
-        rel_d_err = (d_err / d)
+        ratio = d / s
+        rel_d_err = (d_err / s)
         rel_s_err = (s_err / s)
 
-        ax.errorbar(x=x_axis.values, y=d / s, yerr=rel_d_err, fmt="o", markersize=4, color="k")
-        draw(ax, "fill_between", x_axis.values, ys=["y1", "y2"],
-             y2=1 + rel_s_err.values, y1=1 - rel_s_err.values, fill_val=1,
+        vals = standardize_values(x_axis.values, y_values=[ratio, rel_s_err, rel_d_err], add_ends=False)
+        x_axis, ratio, rel_s_err, rel_d_err = vals
+        ax.errorbar(x=x_axis, y=ratio, yerr=rel_d_err, fmt="o", markersize=4, color="k")
+        draw(ax, "fill_between", x_axis, ys=["y1", "y2"],
+             y2=1 + rel_s_err, y1=1 - rel_s_err, fill_val=1,
              color="gray", step="mid", alpha=0.7)
 
     ax.set_ylim(ylim)
@@ -430,9 +434,12 @@ def plot_ratio(data, sims, x, y, yerr, ax, error="both", ylim=[0., 2]):
 def draw(ax, method, x, ys, **kwargs):
     fill_val = kwargs.pop("fill_val", 0)
     expected_xs = kwargs.pop("expected_xs", None)
+    add_ends = kwargs.pop("add_ends", True)
     if x.dtype.kind in 'biufc':
         values = standardize_values(x, [kwargs[y] for y in ys],
-                                    fill_val=fill_val, expected_xs=expected_xs)
+                                    fill_val=fill_val,
+                                    add_ends=add_ends,
+                                    expected_xs=expected_xs)
         x = values[0]
         new_ys = values[1:]
         kwargs.update(dict(zip(ys, new_ys)))
