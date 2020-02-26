@@ -419,6 +419,7 @@ def plot_ratio(data, sims, x, y, yerr, ax, error="both", ylim=[0., 2]):
 
         vals = standardize_values(x_axis.values, y_values=[ratio, rel_s_err, rel_d_err], add_ends=False)
         x_axis, ratio, rel_s_err, rel_d_err = vals
+
         ax.errorbar(x=x_axis, y=ratio, yerr=rel_d_err, fmt="o", markersize=4, color="k")
         draw(ax, "fill_between", x_axis, ys=["y1", "y2"],
              y2=1 + rel_s_err, y1=1 - rel_s_err, fill_val=1,

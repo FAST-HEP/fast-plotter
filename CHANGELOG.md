@@ -8,6 +8,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 ### Changed
 
+## [0.4.0] - 2020-02-26
+- Many changes from PR #26 [@benkrikler](github.com/benkrikler)
+
+### Fixed
+- Bugs in the way overflow bins were handled and step-lines were drawn by padding. Impacted error bars as well as produced weird plotting artefacts.
+
+### Added 
+- Extend unit tests
+- Variable interpolation within the config files and using variables which can be passed from the command-line
+- Y-limits based on plot-margins: pass a float with a percent sign after to limit configs
+- Control over the display of under and overflow bins from the config file
+- Ability to give specific colours for individual bands in the plot
+- Option to control how errors are calculated: sqrt of sumw2 or sumw / sqrt(n)
+
 ## [0.3.0] - 2019-11-1
 - Many changes from PR #13 [@benkrikler](github.com/benkrikler)
 ### Added 
