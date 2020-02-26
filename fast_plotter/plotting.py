@@ -163,11 +163,11 @@ class BarColl(FillColl):
 
 def actually_plot(df, x_axis, y, yerr, kind, label, ax, dataset_col="dataset",
                   dataset_colours=None, colourmap="nipy_spectral", dataset_order=None):
-    if kind == "scatter":
-        df.reset_index().plot.scatter(x=x_axis, y=y, yerr=yerr,
-                                      color="k", label=label, ax=ax, s=13)
-        return
     expected_xs = df.index.unique(x_axis).values
+    if kind == "scatter":
+        draw(ax, "errorbar", x=df.reset_index()[x_axis], ys=["y", "yerr"], y=df[y], yerr=df[yerr],
+             color="k", ms=3.5, fmt="o", label=label, expected_xs=expected_xs)
+        return
     if dataset_order is not None:
         input_datasets = df.index.unique(dataset_col)
         dataset_order = dataset_order + [d for d in input_datasets if d not in dataset_order]
