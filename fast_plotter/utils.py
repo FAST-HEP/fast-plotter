@@ -75,6 +75,8 @@ def split_df(df, first_values, level=0):
     if isinstance(first_values, six.string_types):
         regex = re.compile(first_values)
         first_values = [val for val in df.index.unique(level) if regex.match(val)]
+    if not first_values:
+        return None, df
     second = df.drop(first_values, level=level)
     second_values = second.index.unique(level=level)
     first = df.drop(second_values, level=level)
@@ -162,7 +164,7 @@ def order_datasets(df, dataset_order, dataset_level="dataset", values="sumw"):
 
 
 def rename_index(df, name_replacements):
-    if not isinstance(df.index, pd.core.index.MultiIndex):
+    if not isinstance(df.index, pd.MultiIndex):
         return df
     df.index.names = [name_replacements.get(n, n) for n in df.index.names]
     return df
