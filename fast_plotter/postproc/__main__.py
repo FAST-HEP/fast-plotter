@@ -1,5 +1,6 @@
 import logging
 from . import stages
+from .functions import open_many
 from fast_flow.v1 import read_sequence_yaml
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -46,7 +47,7 @@ if __name__ == "__main__":
     args = make_parser().parse_args()
     if args.debug_dfs:
         logger.setLevel(logging.DEBUG)
-    dfs = stages.open_many(args.files)
+    dfs = open_many(args.files)
     sequence = read_processing_cfg(args.post_process, args.outdir)
     for stage in sequence:
         logger.info("Working on %d dataframes", len(dfs))
