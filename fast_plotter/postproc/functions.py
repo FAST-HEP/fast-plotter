@@ -78,7 +78,7 @@ def rebin(df, axis, mapping, ignore_when_combining=None, rename=None, drop_other
         exploded_map = {}
         for key, value in mapping.items():
             if isinstance(value, dict):
-                result = explode(value, expect_depth, key + ";", depth + 1)
+                result = explode(value, expect_depth, str(key) + ";", depth + 1)
                 exploded_map.update(result)
             else:
                 exploded_map[prefix + key] = prefix + value
