@@ -119,6 +119,8 @@ def split_dimension(df, axis, delimeter=";"):
 def keep_bins(df, axis, keep):
     """Keep bins on the single dimension, dropping others"""
     others = {val for val in df.index.unique(axis) if val not in keep}
+    if not others:
+        return df
     logger.info("Dropping values for '%s': %s", axis, str(others))
     out = df.drop(others, level=axis, axis="index")
     return out
