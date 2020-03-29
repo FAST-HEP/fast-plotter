@@ -47,6 +47,7 @@ setup(
     entry_points={
         'console_scripts': [
             'fast_plotter=fast_plotter.__main__:main',
+            'fast_plotter_postproc=fast_plotter.postproc.__main__:main',
         ],
     },
     install_requires=requirements,

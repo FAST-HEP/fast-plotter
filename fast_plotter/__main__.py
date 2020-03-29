@@ -172,5 +172,4 @@ def save_plots(infile, weight, plots, outdir, extensions):
 
 
 if __name__ == "__main__":
-    args = arg_parser().parse_args()
     main(args)

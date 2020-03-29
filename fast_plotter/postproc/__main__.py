@@ -43,12 +43,14 @@ def dump_debug_df(dfs, debug_dfs_query=""):
     return None
 
 
-if __name__ == "__main__":
-    args = make_parser().parse_args()
+def main(args=None):
+    args = make_parser().parse_args(args=args)
     if args.debug_dfs:
         logger.setLevel(logging.DEBUG)
+
     dfs = open_many(args.files)
     sequence = read_processing_cfg(args.post_process, args.outdir)
+
     for stage in sequence:
         logger.info("Working on %d dataframes", len(dfs))
         dfs = stage(dfs)
@@ -56,3 +58,7 @@ if __name__ == "__main__":
             debug_df = dump_debug_df(dfs, args.debug_dfs_query)
             if debug_df is not None:
                 logger.debug(debug_df.head().to_string())
+
+
+if __name__ == "__main__":
+    main()
