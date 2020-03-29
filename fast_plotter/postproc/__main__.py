@@ -29,11 +29,11 @@ def read_processing_cfg(fname, out_dir):
 
 def dump_debug_df(dfs, debug_dfs_query=""):
     if not debug_dfs_query:
-        return dfs[0].df
+        return dfs[0][0]
 
     for df in dfs:
         try:
-            debug_df = df.df.query(args.debug_dfs_query)
+            debug_df = df[0].query(debug_dfs_query)
             if not debug_df.empty:
                 return debug_df
         except NameError:

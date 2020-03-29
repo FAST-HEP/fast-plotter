@@ -1,7 +1,19 @@
 from . import functions
 
 
+def _unique_vals(entries):
+    from collections import defaultdict
+    unique = defaultdict(set)
+    for entry in entries:
+        for key, val in entry.items():
+            unique[key].add(val)
+    unique = {k: list(v) if len(v) > 1 else v.pop() for k, v in unique.items()}
+    return unique
+
+
 class BaseManipulator():
+    give_meta = False
+
     def __init__(self, **kwargs):
         use_outdir = getattr(self, "use_outdir", False)
         if not use_outdir:
@@ -9,17 +21,27 @@ class BaseManipulator():
         self.name = kwargs.pop("name")
         self.kwargs = kwargs
         self.func = getattr(functions, self.func)
+        self.doc = self.func.__doc__
 
     def __call__(self, dfs):
         if self.cardinality == "many-to-one":
-            out = [self.func(dfs, **self.kwargs)]
+            meta = _unique_vals([d[1] for d in dfs])
+            dfs = [d[0] for d in dfs]
+            out = [(self.func(dfs, **self.kwargs), meta)]
         elif self.cardinality == "one-to-many":
+            self.kwargs.setdefault("return_meta", True)
             out = []
-            for df in dfs:
-                out += self.func(df, **self.kwargs)
+            for df, meta in dfs:
+                results = self.func(df, **self.kwargs)
+                results = [(df, _unique_vals([meta, m])) for df, m in results]
+                out += results
         elif self.cardinality == "one-to-one":
-            out = [self.func(df, **self.kwargs) for df in dfs]
+            if self.give_meta:
+                out = [(self.func(df, meta=m, **self.kwargs), m) for df, m in dfs]
+            else:
+                out = [(self.func(df, **self.kwargs), m) for df, m in dfs]
         elif self.cardinality == "none-to-many":
+            self.kwargs.setdefault("return_meta", True)
             out = dfs + self.func(**self.kwargs)
         return out
 
@@ -118,3 +140,4 @@ class WriteOut(BaseManipulator):
     cardinality = "one-to-one"
     func = "write_out"
     use_outdir = True
+    give_meta = True

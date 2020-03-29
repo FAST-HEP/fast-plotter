@@ -7,29 +7,6 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 
-class LabelledDataframe:
-    def __init__(self, df, name=None, meta=None):
-        self.meta = meta.copy() if meta is not None else {}
-
-        if name is not None:
-            if "--" in name:
-                name = name.split("--")[-1]
-                name = os.path.splitext(name)[0]
-            self.meta["name"] = name
-        self.meta["dims"] = df.index.names
-        self.df = df
-
-    def insert(self, key, value):
-        self.meta[key] = value
-
-    def __getitem__(self, key):
-        return self.meta[key]
-
-    @property
-    def name(self):
-        return self["name"]
-
-
 class BinningDimCombiner():
     def __init__(self, index, cols_to_merge, combine_dims_ignore=None, delimiter="__"):
         col_names = index.names
@@ -78,8 +55,7 @@ def query(df, query):
     See: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.query.html
     """
     logger.info("Applying query: %s", query)
-    out = handle_one_df(df.df, query=query)
-    return LabelledDataframe(out, meta=df.meta)
+    return handle_one_df(df, query=query)
 
 
 def rebin(df, axis, mapping, ignore_when_combining=None, rename=None, drop_others=False):
@@ -89,14 +65,14 @@ def rebin(df, axis, mapping, ignore_when_combining=None, rename=None, drop_other
     logger.info("Rebinning on axis, '%s'", axis)
     if isinstance(axis, (int, float, six.string_types)):
         replacements = [(axis, mapping)]
-        out = handle_one_df(df.df, replacements=replacements)
+        out = handle_one_df(df, replacements=replacements)
         if drop_others:
             out = keep_bins(out, axis, set(mapping.values()))
         if rename is not None:
             out.index.set_names(rename, level=axis, inplace=True)
-        return LabelledDataframe(out, meta=df.meta)
+        return out
 
-    out_df = handle_one_df(df.df, combine_dims=axis, combine_delim=";")
+    out_df = handle_one_df(df, combine_dims=axis, combine_delim=";")
 
     def explode(mapping, expect_depth, prefix="", depth=0):
         exploded_map = {}
@@ -122,7 +98,6 @@ def rebin(df, axis, mapping, ignore_when_combining=None, rename=None, drop_other
     else:
         out_df.index.set_names(rename, level=replacements[0], inplace=True)
 
-    out_df = LabelledDataframe(out_df, meta=df.meta)
     return out_df
 
 
@@ -157,10 +132,10 @@ def keep_specific_bins(df, axis, keep, expansions={}):
     if not isinstance(axis, list):
         out_df = keep_bins(df, axis, keep)
         keep = [k.format(**{name: v}) for name, vals in expansions.items() for v in vals for k in keep]
-        return LabelledDataframe(out_df, meta=df.meta)
+        return out_df
 
     delim = ";"
-    out_df = handle_one_df(df.df, combine_dims=axis, combine_delim=delim)
+    out_df = handle_one_df(df, combine_dims=axis, combine_delim=delim)
     expanded = [(tuple(), keep)]
     for ax in axis[:-1]:
         expanded = [(last + (new, ), remaining) for last, new_items in expanded for new, remaining in new_items.items()]
@@ -171,7 +146,7 @@ def keep_specific_bins(df, axis, keep, expansions={}):
     expanded = [k.format(**{name: v}) for name, vals in expansions.items() for v in vals for k in expanded]
     out_df = keep_bins(out_df, delim.join(axis), expanded)
     out_df = split_dimension(out_df, axis, delimeter=delim)
-    return LabelledDataframe(out_df, meta=df.meta)
+    return out_df
 
 
 def combine_cols(df, format_strings):
@@ -182,13 +157,13 @@ def combine_cols(df, format_strings):
     def apply_fmt(row):
         return [s.format(**row) for s in format_strings.values()]
 
-    index = df.df.index.names
-    new_df = df.df.reset_index()
+    index = df.index.names
+    new_df = df.reset_index()
     results = new_df.apply(apply_fmt, axis="columns", result_type="expand")
     results.columns = result_names
     new_df = new_df.assign(**results)
     new_df.set_index(index, inplace=True, drop=True)
-    return LabelledDataframe(new_df, meta=df.meta)
+    return new_df
 
 
 def regex_split_dimension(df, axis, regex):
@@ -196,18 +171,18 @@ def regex_split_dimension(df, axis, regex):
     Split up a binning dimensions using a regex and pandas.Series.str.extract
     """
     logger.info("Splitting on axis, '%s' with regex '%s'", axis, regex)
-    index = df.df.index.to_frame()
+    index = df.index.to_frame()
     split_index = index[axis].str.extract(regex, expand=True)
     index.drop(axis, axis="columns", inplace=True)
     for col in split_index.columns:
         index[col] = split_index[col]
-    df.df.set_index(pd.MultiIndex.from_frame(index), inplace=True, drop=True)
-    return LabelledDataframe(df.df, meta=df.meta)
+    df.set_index(pd.MultiIndex.from_frame(index), inplace=True, drop=True)
+    return df
 
 
 def rename_cols(df, mapping):
     """Rename one or more value columns"""
-    df.df.rename(mapping, inplace=True, axis="columns")
+    df.rename(mapping, inplace=True, axis="columns")
     return df
 
 
@@ -215,46 +190,45 @@ def rename_dim(df, mapping):
     """
     Rename one or more dimensions
     """
-    df.df.index.names = [mapping.get(n, n) for n in df.df.index.names]
-    return LabelledDataframe(df.df, meta=df.meta)
+    df.index.names = [mapping.get(n, n) for n in df.df.index.names]
+    return df
 
 
-def split(df, axis, keep_split_dim):
+def split(df, axis, keep_split_dim, return_meta=True):
     """
     split the dataframe into a list of dataframes using a given binning
     dimensions
     """
     logger.info("Splitting on axis: '%s'", axis)
     out_dfs = []
-    groups = df.df.groupby(level=axis, group_keys=keep_split_dim)
+    groups = df.groupby(level=axis, group_keys=keep_split_dim)
     for split_val, group in groups:
         if not keep_split_dim:
-            group.index = group.index.droplevel(split_on_dimension)
-        out = LabelledDataframe(group.copy(), meta=df.meta)
-        out.insert("split_name", "%s_%s" % (axis, split_val))
-        out.insert(axis, split_val)
-        out_dfs.append(out)
+            group.index = group.index.droplevel(axis)
+        result = group.copy()
+        if return_meta:
+            meta = {"split_name": "%s_%s" % (axis, split_val),
+                    axis: split_val}
+            result = (result, meta)
+        out_dfs.append(result)
     return out_dfs
 
 
 def reorder_dimensions(df, order):
     """
-    Reorder the binning dimensions 
+    Reorder the binning dimensions
     """
     logger.info("Ordering binning dimensions according to: %s", str(order))
-    out = df.df.reorder_levels(order, axis="index")
-    return LabelledDataframe(out, meta=df.meta)
+    return df.reorder_levels(order, axis="index")
 
 
-def densify(in_df, known={}):
+def densify(df, known={}):
     """
     Densify axes with known values and / or values from axes on other
     dimensions
     """
     logger.info("Densify dimensions")
-    df = in_df.df
     before_len = len(df)
-    
 
     index_vals = []
     names = df.index.names
@@ -271,8 +245,7 @@ def densify(in_df, known={}):
 
     after_len = len(df)
     logger.info("    Change to number of bins (after - before): %d", after_len - before_len)
-    in_df.df = df
-    return in_df
+    return df
 
 
 def stack_weights(df, drop_n_col=False):
@@ -281,22 +254,21 @@ def stack_weights(df, drop_n_col=False):
     """
     logger.info("Stacking weights")
     if drop_n_col:
-        df.df.drop("n", inplace=True, axis="columns")
-    df.df.columns = pd.MultiIndex.from_tuples([c.split(":") for c in df.df.columns], names=["systematic", ""])
-    out = df.df.stack(0, dropna=False)
-    return LabelledDataframe(out, meta=df.meta)
+        df.drop("n", inplace=True, axis="columns")
+    df.columns = pd.MultiIndex.from_tuples([c.split(":") for c in df.columns], names=["systematic", ""])
+    out = df.stack(0, dropna=False)
+    return out
 
 
 def to_datacard_inputs(df, select_data, rename_syst_vars=False):
     """
     Convert to a long-form dataframe suitable as input to fast-datacard
     """
-    meta = df.meta
     logger.info("Converting to datacard inputs")
     if rename_syst_vars:
-        df.df.columns = [n.replace("_up:", "_Up:").replace("_down:", "_Down:") for n in df.df.columns]
-    df.df.set_index("n", append=True, inplace=True)
-    df = stack_weights(df).df
+        df.columns = [n.replace("_up:", "_Up:").replace("_down:", "_Down:") for n in df.columns]
+    df.set_index("n", append=True, inplace=True)
+    df = stack_weights(df)
     df.reset_index(level="n", inplace=True)
     data_mask = df.eval(select_data)
     df["content"] = df.n
@@ -304,7 +276,7 @@ def to_datacard_inputs(df, select_data, rename_syst_vars=False):
     df["error"] = df.content / np.sqrt(df.n)
 
     df.drop(["n", "sumw", "sumw2"], inplace=True, axis="columns")
-    return LabelledDataframe(df, meta=meta)
+    return df
 
 
 def assign_col(df, assignments={}, evals={}, drop_cols=[]):
@@ -312,80 +284,77 @@ def assign_col(df, assignments={}, evals={}, drop_cols=[]):
     Add or change columns by assigning or evaluating new ones
     """
     for key, value in evals.items():
-        df.df[key] = df.df.eval(value)
+        df[key] = df.eval(value)
 
     if assignments:
-        df.df = df.df.assign(**assignments)
+        df = df.assign(**assignments)
 
     if drop_cols:
-        df.df.drop(drop_cols, axis="columns", inplace=True)
-    return LabelledDataframe(df.df, meta=df.meta)
+        df.drop(drop_cols, axis="columns", inplace=True)
+    return df
 
 
 def assign_dim(df, assignments={}, evals={}, drop_cols=[]):
     """
     Add binning dimensions to the index by assigning or evaluating
     """
-    index = LabelledDataframe(df.df.index.to_frame(), name="index")
-    index = assign_col(index, assignments=assignments, evals=evals, drop_cols=drop_cols).df
-    df.df.set_index(pd.MultiIndex.from_frame(index), inplace=True, drop=True)
-    return LabelledDataframe(df.df, name=df.name)
+    index = df.index.to_frame()
+    index = assign_col(index, assignments=assignments, evals=evals, drop_cols=drop_cols)
+    df.set_index(pd.MultiIndex.from_frame(index), inplace=True, drop=True)
+    return df
 
 
-def merge(in_dfs, keys=None):
+def merge(dfs):
     """ Merge a list of binned dataframes together
     """
-    logger.info("Merging %d dataframes", len(in_dfs))
-    assert len(set(df["name"] for df in in_dfs)) == 1
-    dfs = [df.df for df in in_dfs]
-    final_df = pd.concat(dfs, sort=True)#.fillna(float("-inf"))
-    final_df = final_df.groupby(level=final_df.index.names).sum()#.replace(float("-inf"), float("nan"))
-    return LabelledDataframe(final_df, name=in_dfs[0]["name"])
+    logger.info("Merging %d dataframes", len(dfs))
+    final_df = pd.concat(dfs, sort=True)  # .fillna(float("-inf"))
+    final_df = final_df.groupby(level=final_df.index.names).sum()  # .replace(float("-inf"), float("nan"))
+    return final_df
 
 
 def multiply_values(df, constant=0, mapping={}, weight_by_dataframes=[], apply_if=None):
     logger.info("Multiplying values")
-    in_df = df.df
     mask = slice(None)
     if apply_if:
-        mask = in_df.eval(apply_if)
+        mask = df.eval(apply_if)
         if mask.dtype.kind != "b":
             msg = "'apply_if' statement doesn't return a boolean: %s"
             raise ValueError(msg % apply_if)
-        in_df = in_df.loc[mask]
-    if constant:
-        out_df = in_df * constant
+        ignored = df.loc[~mask]
+        df = df.loc[mask]
     if mapping:
         raise NotImplementedError("'mapping' option not yet implemented")
     if weight_by_dataframes:
-        out_df = in_df
         for mul_df in weight_by_dataframes:
-            out_df = multiply_dataframe(out_df, mul_df)
+            df = multiply_dataframe(df, mul_df)
+    if constant:
+        df = df * constant
     if apply_if:
-        out_df = pd.concat([out_df, in_df.loc[~mask]])
-    return LabelledDataframe(out_df, meta=df.meta)
+        df = pd.concat([df, ignored])
+    return df
 
 
 def multiply_dataframe(df, multiply_df, use_column=None):
     if isinstance(multiply_df, six.string_types):
-        multiply_df = open_many([multiply_df])[0]
+        multiply_df = open_many([multiply_df], return_meta=False)[0]
     if use_column is not None:
         multiply_df = multiply_df[use_column]
     if isinstance(multiply_df, pd.Series):
-        out = df.df.mul(multiply_df, axis=0)
+        out = df.mul(multiply_df, axis=0)
     else:
-        out = df.df * multiply_df
-    return LabelledDataframe(out, df.meta)
+        out = df * multiply_df
+    return out
 
 
 def normalise_group(df, groupby_dimensions, apply_if=None, use_column=None):
     logger.info("Normalising within groups defined by: %s", str(groupby_dimensions))
-    norm_to = 1 / df.df.groupby(level=groupby_dimensions).sum()
-    normed = multiply_dataframe(df, multiply_df=norm_to, use_column=use_column).df
-    return LabelledDataframe(normed, meta=df.meta)
+    norm_to = 1 / df.groupby(level=groupby_dimensions).sum()
+    normed = multiply_dataframe(df, multiply_df=norm_to, use_column=use_column)
+    return normed
 
 
-def open_many(file_list):
+def open_many(file_list, return_meta=True):
     """ Open a list of dataframe files
     """
     dfs = []
@@ -395,21 +364,26 @@ def open_many(file_list):
         df.drop(drop_cols, inplace=True, axis="columns")
         index_cols = [col for col in df.columns if "sumw" not in col and col != "n"]
         df.set_index(index_cols, inplace=True, drop=True)
-        df = LabelledDataframe(df, name=fname)
+        if return_meta:
+            name = fname
+            if "--" in name:
+                name = name.split("--")[-1]
+                name = os.path.splitext(name)[0]
+            df = (df, dict(name=name))
         dfs.append(df)
     return dfs
 
 
-def write_out(df, filename="tbl_{dims}--{name}.csv", out_dir=None):
+def write_out(df, meta, filename="tbl_{dims}--{name}.csv", out_dir=None):
     """ Write a dataframe to disk
     """
-    dims = ".".join(df["dims"])
-    meta = df.meta.copy()
-    meta["dims"] = dims
+    meta = meta.copy()
+    meta["dims"] = ".".join(df.index.names)
+
     complete_file = filename.format(**meta)
     if out_dir:
         complete_file = os.path.join(out_dir, complete_file)
     os.makedirs(os.path.dirname(complete_file), exist_ok=True)
     logger.info("Writing out file '%s'", complete_file)
-    df.df.to_csv(complete_file)
+    df.to_csv(complete_file)
     return df
