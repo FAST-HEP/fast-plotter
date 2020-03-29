@@ -4,11 +4,13 @@ import numpy as np
 import pandas as pd
 from fast_plotter.postproc import functions as funcs
 
+
 def _make_string(index):
     chars = string.printable
     start = index % len(chars)
     stop = (index + 28) % len(chars)
     return chars[start] + chars[stop]
+
 
 @pytest.fixture
 def binned_df():
