@@ -4,9 +4,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.5.0] - 2020-03-30
+## [0.5.1] - 2020-03-30
+### Fixed
+- Bugs in post-processing modules, PR #29 [@benkrikler](github.com/benkrikler)
+
+## [0.5.0] - 2020-03-29
 ### Added
-- New post-processing command to reshape outputs of fast-carpenter
+- New post-processing command to reshape outputs of fast-carpenter from PR #28 [@benkrikler](github.com/benkrikler)
 
 ## [0.4.0] - 2020-02-26
 - Many changes from PR #26 [@benkrikler](github.com/benkrikler)
