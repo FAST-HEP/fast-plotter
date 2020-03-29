@@ -70,9 +70,9 @@ def test_combine_cols_AND_split_dimension(binned_df):
 #     #def rename_cols(df, mapping):
 #     pass
 
-# def test_rename_dim():
-#     #def rename_dim(df, mapping):
-#     pass
+def test_rename_dim(binned_df):
+    result = funcs.rename_dim(binned_df, {"int": "integers", "cat": "CATEGORICALS"})
+    assert result.index.names == ["integers", "CATEGORICALS", "interval"]
 
 # def test_split():
 #     #def split(df, axis, keep_split_dim, return_meta=True):

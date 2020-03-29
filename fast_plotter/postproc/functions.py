@@ -190,7 +190,7 @@ def rename_dim(df, mapping):
     """
     Rename one or more dimensions
     """
-    df.index.names = [mapping.get(n, n) for n in df.df.index.names]
+    df.index.names = [mapping.get(n, n) for n in df.index.names]
     return df
 
 
