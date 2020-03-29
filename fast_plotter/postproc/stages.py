@@ -7,7 +7,7 @@ def _unique_vals(entries):
     for entry in entries:
         for key, val in entry.items():
             unique[key].add(val)
-    unique = {k: list(v) if len(v) > 1 else v.pop() for k, v in unique.items()}
+    unique = {k: tuple(v) if len(v) > 1 else v.pop() for k, v in unique.items()}
     return unique
 
 

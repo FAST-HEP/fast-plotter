@@ -369,7 +369,7 @@ def open_many(file_list, return_meta=True):
             if "--" in name:
                 name = name.split("--")[-1]
                 name = os.path.splitext(name)[0]
-            df = (df, dict(name=name))
+            df = (df, dict(name=name, filename=fname))
         dfs.append(df)
     return dfs
 
