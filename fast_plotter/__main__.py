@@ -104,12 +104,11 @@ def process_one_file(infile, args):
     for weight in weights:
         if args.weights and weight not in args.weights:
             continue
+        df_filtered = df.copy()
         if weight == "n":
-            df_filtered = df.filter(weight, axis="columns").copy()
-            df_filtered.rename({weight: "sumw"}, axis="columns", inplace=True)
-            df_filtered["sumw2"] = df_filtered.sumw
+            df_filtered["sumw"] = df_filtered.n
+            df_filtered["sumw2"] = df_filtered.n
         else:
-            df_filtered = df.copy()
             if "n" in df.columns:
                 data_rows = mask_rows(df_filtered,
                                       regex=args.data,
