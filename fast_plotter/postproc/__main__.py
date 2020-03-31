@@ -59,7 +59,7 @@ def main(args=None):
         if args.debug_dfs:
             debug_df = dump_debug_df(dfs, args.debug_dfs_query)
             if debug_df is not None:
-                logger.debug(debug_df.head(args.debug_num).to_string())
+                logger.debug(debug_df.head(args.debug_rows).to_string())
 
 
 if __name__ == "__main__":
