@@ -376,7 +376,7 @@ def open_many(file_list, return_meta=True):
     return dfs
 
 
-def write_out(df, meta, filename="tbl_{dims}--{name}.csv", out_dir=None):
+def write_out(df, meta, filename="tbl_{dims}--{name}", out_dir=None, filetype="csv"):
     """ Write a dataframe to disk
     """
     meta = meta.copy()
@@ -387,5 +387,10 @@ def write_out(df, meta, filename="tbl_{dims}--{name}.csv", out_dir=None):
         complete_file = os.path.join(out_dir, complete_file)
     os.makedirs(os.path.dirname(complete_file), exist_ok=True)
     logger.info("Writing out file '%s'", complete_file)
-    df.to_csv(complete_file)
+    if not complete_file.endswith(filetype):
+        complete_file += "." + filetype
+    if filetype == "csv":
+        df.to_csv(complete_file)
+    elif filetype == "hd5":
+        df.to_hdf(complete_file)
     return df
