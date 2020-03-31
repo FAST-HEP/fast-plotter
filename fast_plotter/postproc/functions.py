@@ -392,5 +392,5 @@ def write_out(df, meta, filename="tbl_{dims}--{name}", out_dir=None, filetype="c
     if filetype == "csv":
         df.to_csv(complete_file)
     elif filetype == "hd5":
-        df.to_hdf(complete_file)
+        df.to_hdf(complete_file, key="df")
     return df
