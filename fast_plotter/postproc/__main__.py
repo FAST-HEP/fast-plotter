@@ -13,6 +13,8 @@ def make_parser():
                         help="Print a dataframe after each step")
     parser.add_argument("--debug-dfs-query", default=None,
                         help="Provide a query to select rows from the debugged dataframe")
+    parser.add_argument("--debug-num", default=5,
+                        help="Number of rows to dump from debugging dataframe")
     parser.add_argument("-p", "--post-process", default=None, required=True,
                         help="A yaml to configure the post-processing step")
     parser.add_argument("-o", "--outdir", default=".",
@@ -57,7 +59,7 @@ def main(args=None):
         if args.debug_dfs:
             debug_df = dump_debug_df(dfs, args.debug_dfs_query)
             if debug_df is not None:
-                logger.debug(debug_df.head().to_string())
+                logger.debug(debug_df.head(args.debug_num).to_string())
 
 
 if __name__ == "__main__":
