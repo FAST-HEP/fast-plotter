@@ -201,6 +201,10 @@ def split(df, axis, keep_split_dim, return_meta=True):
     split the dataframe into a list of dataframes using a given binning
     dimensions
     """
+    if isinstance(axis, (list, tuple)):
+        axis = tuple(axis)
+    else:
+        axis = (axis, )
     logger.info("Splitting on axis: '%s'", axis)
     out_dfs = []
     groups = df.groupby(level=axis, group_keys=keep_split_dim)
@@ -209,8 +213,9 @@ def split(df, axis, keep_split_dim, return_meta=True):
             group.index = group.index.droplevel(axis)
         result = group.copy()
         if return_meta:
-            meta = {"split_name": "%s_%s" % (axis, split_val),
-                    axis: split_val}
+            meta = dict(zip(axis, split_val))
+            split_name = "--".join(map("_".join, meta.items()))
+            meta["split_name"] = split_name
             result = (result, meta)
         out_dfs.append(result)
     return out_dfs
