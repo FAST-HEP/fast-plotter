@@ -206,6 +206,7 @@ def split(df, axis, keep_split_dim, return_meta=True):
             return tuple(obj)
         else:
             return (obj, )
+
     axis = to_tuple(axis)
     logger.info("Splitting on axis: '%s'", axis)
     out_dfs = []
