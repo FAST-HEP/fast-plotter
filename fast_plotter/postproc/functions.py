@@ -119,6 +119,8 @@ def split_dimension(df, axis, delimeter=";"):
 def keep_bins(df, axis, keep):
     """Keep bins on the single dimension, dropping others"""
     others = {val for val in df.index.unique(axis) if val not in keep}
+    if not others:
+        return df
     logger.info("Dropping values for '%s': %s", axis, str(others))
     out = df.drop(others, level=axis, axis="index")
     return out
@@ -190,7 +192,7 @@ def rename_dim(df, mapping):
     """
     Rename one or more dimensions
     """
-    df.index.names = [mapping.get(n, n) for n in df.df.index.names]
+    df.index.names = [mapping.get(n, n) for n in df.index.names]
     return df
 
 
@@ -199,16 +201,25 @@ def split(df, axis, keep_split_dim, return_meta=True):
     split the dataframe into a list of dataframes using a given binning
     dimensions
     """
+    def to_tuple(obj):
+        if isinstance(obj, (list, tuple)):
+            return tuple(obj)
+        else:
+            return (obj, )
+
+    axis = to_tuple(axis)
     logger.info("Splitting on axis: '%s'", axis)
     out_dfs = []
     groups = df.groupby(level=axis, group_keys=keep_split_dim)
     for split_val, group in groups:
+        split_val = to_tuple(split_val)
         if not keep_split_dim:
             group.index = group.index.droplevel(axis)
         result = group.copy()
         if return_meta:
-            meta = {"split_name": "%s_%s" % (axis, split_val),
-                    axis: split_val}
+            meta = dict(zip(axis, split_val))
+            split_name = "--".join(map("_".join, meta.items()))
+            meta["split_name"] = split_name
             result = (result, meta)
         out_dfs.append(result)
     return out_dfs
@@ -374,7 +385,7 @@ def open_many(file_list, return_meta=True):
     return dfs
 
 
-def write_out(df, meta, filename="tbl_{dims}--{name}.csv", out_dir=None):
+def write_out(df, meta, filename="tbl_{dims}--{name}", out_dir=None, filetype="csv"):
     """ Write a dataframe to disk
     """
     meta = meta.copy()
@@ -385,5 +396,10 @@ def write_out(df, meta, filename="tbl_{dims}--{name}.csv", out_dir=None):
         complete_file = os.path.join(out_dir, complete_file)
     os.makedirs(os.path.dirname(complete_file), exist_ok=True)
     logger.info("Writing out file '%s'", complete_file)
-    df.to_csv(complete_file)
+    if not complete_file.endswith(filetype):
+        complete_file += "." + filetype
+    if filetype == "csv":
+        df.to_csv(complete_file)
+    elif filetype == "hd5":
+        df.to_hdf(complete_file, key="df")
     return df

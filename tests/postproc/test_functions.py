@@ -33,9 +33,9 @@ def test_query(binned_df):
 
 
 def test_rebin(binned_df):
-    result = funcs.rebin(binned_df.copy(), axis="int", mapping=dict(zip(range(4), [0, 2] * 2)))
+    result = funcs.rebin(binned_df.copy(), rename="hruff", axis="int", mapping=dict(zip(range(4), [0, 2] * 2)))
     assert len(result) == 20
-    assert list(result.index.unique("int")) == [0, 2]
+    assert list(result.index.unique("hruff")) == [0, 2]
 
     mapping = {0: dict(bar="foo"), 2: dict(foo="bar"), 3: dict(foo="BAZ", bar="BAZ")}
     result = funcs.rebin(binned_df.copy(), axis=["int", 'cat'], mapping=mapping)
@@ -43,13 +43,18 @@ def test_rebin(binned_df):
     assert set(result.index.unique("cat")) == {"bar", "BAZ", "foo"}
 
 
-# def test_keep_bins():
-#     #def keep_bins(df, axis, keep):
-#     pass
+def test_keep_bins(binned_df):
+    result = funcs.keep_bins(binned_df.copy(), "int", keep=[0, 2])
+    assert len(result) == 20
+
+    result = funcs.keep_bins(binned_df.copy(), "int", keep=binned_df.index.unique("int"))
+    assert len(result) == 40
+
 
 # def test_keep_specific_bins():
 #     #def keep_specific_bins(df, axis, keep, expansions={}):
 #     pass
+
 
 def test_combine_cols_AND_split_dimension(binned_df):
     result = funcs.combine_cols(binned_df, {"a;b": "{a};{b}"})
@@ -70,9 +75,11 @@ def test_combine_cols_AND_split_dimension(binned_df):
 #     #def rename_cols(df, mapping):
 #     pass
 
-# def test_rename_dim():
-#     #def rename_dim(df, mapping):
-#     pass
+
+def test_rename_dim(binned_df):
+    result = funcs.rename_dim(binned_df, {"int": "integers", "cat": "CATEGORICALS"})
+    assert result.index.names == ["integers", "CATEGORICALS", "interval"]
+
 
 # def test_split():
 #     #def split(df, axis, keep_split_dim, return_meta=True):
