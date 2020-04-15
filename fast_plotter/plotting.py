@@ -145,7 +145,7 @@ class FillColl(object):
                 width = 2
                 style = "--"
             draw(ax, "step", x=x, ys=["y"], y=y, expected_xs=self.expected_xs,
-                 color=color, linewidth=width, where="mid", label=label, linestyle=style)
+                 color=color, linewidth=width, label=label, linestyle=style)
         self.calls += 1
 
 
@@ -201,7 +201,7 @@ def actually_plot(df, x_axis, y, yerr, kind, label, ax, dataset_col="dataset",
         y_down = (summed[y] - summed[yerr]).values
         y_up = (summed[y] + summed[yerr]).values
         draw(ax, "fill_between", x, ys=["y1", "y2"], y2=y_down, y1=y_up,
-             color="gray", step="mid", alpha=0.7, expected_xs=expected_xs)
+             color="gray", alpha=0.7, expected_xs=expected_xs)
     else:
         raise RuntimeError("Unknown value for 'kind', '{}'".format(kind))
 
@@ -321,7 +321,6 @@ def plot_1d_many(df, prefix="", data="data", signal=None, dataset_col="dataset",
         yvar = prefix + ":" + yvar
         yerr = prefix + ":" + yerr
 
-    #df = utils.convert_intervals(df, to="mid")
     if not show_over_underflow:
         df = utils.drop_over_underflow(df)
     in_df_data, in_df_sims = utils.split_data_sims(
@@ -442,19 +441,21 @@ def plot_ratio(data, sims, x, y, yerr, ax, error="both", ylim=[0., 2]):
         mask = (central != 0) & (lower != 0)
         ax.errorbar(x=x_axis[mask], y=central[mask], yerr=(lower[mask], upper[mask]),
                     fmt="o", markersize=4, color="k")
+        draw(ax, "errorbar", x_axis[mask], ys=["y", "yerr"],
+             y=central[mask], yerr=(lower[mask], upper[mask]),
+             fmt="o", markersize=4, color="k")
 
     elif error == "both":
         ratio = d / s
         rel_d_err = (d_err / s)
         rel_s_err = (s_err / s)
 
-        vals = standardize_values(x_axis, y_values=[ratio, rel_s_err, rel_d_err], add_ends=False)
-        x_axis, ratio, rel_s_err, rel_d_err = vals
-
-        ax.errorbar(x=x_axis, y=ratio, yerr=rel_d_err, fmt="o", markersize=4, color="k")
+        draw(ax, "errorbar", x_axis, ys=["y", "yerr"],
+             y=ratio, yerr=rel_d_err,
+             fmt="o", markersize=4, color="k")
         draw(ax, "fill_between", x_axis, ys=["y1", "y2"],
              y2=1 + rel_s_err, y1=1 - rel_s_err, fill_val=1,
-             color="gray", step="mid", alpha=0.7)
+             color="gray", alpha=0.7)
 
     ax.set_ylim(ylim)
     ax.grid(True)
@@ -463,10 +464,34 @@ def plot_ratio(data, sims, x, y, yerr, ax, error="both", ylim=[0., 2]):
     ax.set_ylabel("Data / MC")
 
 
+def convert_intervals(vals):
+    if isinstance(vals, pd.Series) and isinstance(vals[0], pd.Interval):
+        vals = vals.apply(lambda i: i.mid).values
+    elif isinstance(vals, pd.arrays.IntervalArray):
+        vals = vals.mid
+    return vals
+
+
+def is_intervals(vals):
+    if isinstance(vals, pd.Series) and isinstance(vals[0], pd.Interval):
+        return True
+    elif isinstance(vals, (pd.arrays.IntervalArray, pd.IntervalIndex)):
+        return True
+    return False
+
+
 def draw(ax, method, x, ys, **kwargs):
     fill_val = kwargs.pop("fill_val", 0)
     expected_xs = kwargs.pop("expected_xs", None)
     add_ends = kwargs.pop("add_ends", True)
+    if method == "fill_between":
+        kwargs["step"] = "post" if is_intervals(x) else "mid"
+    elif method in "step":
+        kwargs["where"] = "post" if is_intervals(x) else "mid"
+    else:
+        x = convert_intervals(x)
+        expected_xs = convert_intervals(expected_xs)
+
     if x.dtype.kind in 'biufc' or isinstance(x[0], pd.Interval):
         values = standardize_values(x, [kwargs[y] for y in ys],
                                     fill_val=fill_val,
