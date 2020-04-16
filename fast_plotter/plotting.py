@@ -224,6 +224,9 @@ def standardize_values(x, y_values=[], fill_val=0, expected_xs=None, add_ends=Tr
         x, y_values = intervals_to_breaks(x, y_values, fill_val)
 
     if x.dtype.kind in 'bifc':
+        if not isinstance(x, np.ndarray):
+            x = x.values
+
         x = replace_infs(x)
 
         if add_ends:
@@ -465,9 +468,11 @@ def plot_ratio(data, sims, x, y, yerr, ax, error="both", ylim=[0., 2]):
 
 
 def convert_intervals(vals):
+    if vals is None:
+        return vals
     if isinstance(vals, pd.Series) and isinstance(vals[0], pd.Interval):
         vals = vals.apply(lambda i: i.mid).values
-    elif isinstance(vals, pd.arrays.IntervalArray):
+    elif isinstance(vals, (pd.arrays.IntervalArray, pd.IntervalIndex)):
         vals = vals.mid
     return vals
 
@@ -486,7 +491,7 @@ def draw(ax, method, x, ys, **kwargs):
     add_ends = kwargs.pop("add_ends", True)
     if method == "fill_between":
         kwargs["step"] = "post" if is_intervals(x) else "mid"
-    elif method in "step":
+    elif method == "step":
         kwargs["where"] = "post" if is_intervals(x) else "mid"
     else:
         x = convert_intervals(x)
