@@ -61,7 +61,7 @@ def test_drop_over_underflow():
     x3 = [10, 11, 20]
 
     def build_df(*indices):
-        index = pd.MultiIndex.from_product(indices)
+        index = pd.MultiIndex.from_product(indices, names=list(map(str, range(len(indices)))))
         df = pd.DataFrame({"A": np.arange(len(index))}, index=index)
         return df
 
