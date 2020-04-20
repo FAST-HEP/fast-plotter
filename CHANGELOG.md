@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Option to specify which columns contain bin values rather than labels, PR #31 [@benkrikler](github.com/benkrikler)
 
+### Fixed
+- Report package version number properly, PR #31
+
 ## [0.5.1] - 2020-04-7
 ### Fixed
 - Bugs in post-processing modules, PR #29 [@benkrikler](github.com/benkrikler)
