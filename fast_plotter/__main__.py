@@ -6,6 +6,7 @@ import six
 import logging
 import matplotlib
 matplotlib.use('Agg')
+from .version import __version__ # noqa
 from .utils import read_binned_df, weighting_vars # noqa
 from .utils import decipher_filename, mask_rows  # noqa
 from .plotting import plot_all, add_annotations # noqa
@@ -42,6 +43,7 @@ def arg_parser(args=None):
                         help="Scale the MC yields by this lumi")
     parser.add_argument("-y", "--yscale", default="log", choices=["log", "linear"],
                         help="Use this scale for the y-axis")
+    parser.add_argument('--version', action='version', version='%(prog)s ' + __version__)
 
     def split_equals(arg):
         return arg.split("=")

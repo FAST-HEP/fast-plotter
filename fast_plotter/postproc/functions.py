@@ -1,5 +1,6 @@
 import os
 import six
+import re
 import numpy as np
 import pandas as pd
 import logging
@@ -365,7 +366,7 @@ def normalise_group(df, groupby_dimensions, apply_if=None, use_column=None):
     return normed
 
 
-def open_many(file_list, return_meta=True):
+def open_many(file_list, value_columns=r"(.*sumw2?|n)", return_meta=True):
     """ Open a list of dataframe files
     """
     dfs = []
@@ -373,7 +374,7 @@ def open_many(file_list, return_meta=True):
         df = pd.read_csv(fname, comment='#')
         drop_cols = [col for col in df.columns if "Unnamed" in col]
         df.drop(drop_cols, inplace=True, axis="columns")
-        index_cols = [col for col in df.columns if "sumw" not in col and col != "n"]
+        index_cols = [col for col in df.columns if not re.match(value_columns, col)]
         df.set_index(index_cols, inplace=True, drop=True)
         if return_meta:
             name = fname

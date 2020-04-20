@@ -19,6 +19,9 @@ def make_parser():
                         help="A yaml to configure the post-processing step")
     parser.add_argument("-o", "--outdir", default=".",
                         help="The name of the output directory")
+    parser.add_argument("-V", "--value-cols", default=r"(.*sumw2?|n)",
+                        help="A regular expression to control which columns are"
+                        " identified as values and not bin labels")
     parser.add_argument("files", nargs="+",
                         help="Input dataframes that need merging together")
     return parser
@@ -50,7 +53,7 @@ def main(args=None):
     if args.debug_dfs:
         logger.setLevel(logging.DEBUG)
 
-    dfs = open_many(args.files)
+    dfs = open_many(args.files, value_columns=args.value_cols)
     sequence = read_processing_cfg(args.post_process, args.outdir)
 
     for stage in sequence:
