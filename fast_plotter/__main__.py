@@ -6,10 +6,10 @@ import six
 import logging
 import matplotlib
 matplotlib.use('Agg')
+from .version import __version__ # noqa
 from .utils import read_binned_df, weighting_vars # noqa
 from .utils import decipher_filename, mask_rows  # noqa
 from .plotting import plot_all, add_annotations # noqa
-from .version import __version__
 
 
 logger = logging.getLogger("fast_plotter")
