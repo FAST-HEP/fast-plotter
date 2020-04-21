@@ -219,7 +219,7 @@ def split(df, axis, keep_split_dim, return_meta=True):
         result = group.copy()
         if return_meta:
             meta = dict(zip(axis, split_val))
-            split_name = "--".join(map("_".join, meta.items()))
+            split_name = "--".join(["{}_{}".format(*i) for i in meta.items()])
             meta["split_name"] = split_name
             result = (result, meta)
         out_dfs.append(result)
