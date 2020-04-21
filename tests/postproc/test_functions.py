@@ -82,14 +82,13 @@ def test_rename_dim(binned_df):
 
 
 def test_split(binned_df):
-     #def split(df, axis, keep_split_dim, return_meta=True):
-     results = funcs.split(binned_df, "cat", keep_split_dim=True)
-     assert len(results) == 2
-     assert all([r[0].index.nlevels == 3 for r in results])
+    results = funcs.split(binned_df, "cat", keep_split_dim=True)
+    assert len(results) == 2
+    assert all([r[0].index.nlevels == 3 for r in results])
 
-     results = funcs.split(binned_df, "int", keep_split_dim=True)
-     assert len(results) == 4
-     assert all([r[0].index.nlevels == 3 for r in results])
+    results = funcs.split(binned_df, "int", keep_split_dim=True)
+    assert len(results) == 4
+    assert all([r[0].index.nlevels == 3 for r in results])
 
 
 # def test_reorder_dimensions():
