@@ -21,7 +21,7 @@ def get_version():
     return _globals["__version__"]
 
 
-requirements = ['matplotlib', 'pandas>=1.0.3', 'numpy', 'scipy']
+requirements = ['matplotlib', 'pandas', 'numpy', 'scipy']
 
 setup_requirements = ['pytest-runner', ]
 
