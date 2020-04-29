@@ -131,6 +131,16 @@ class NormaliseGroup(BaseManipulator):
     func = "normalise_group"
 
 
+class GenericPandas(BaseManipulator):
+    cardinality = "one-to-one"
+    func = "generic_pandas"
+
+
+class UnstackWeights(BaseManipulator):
+    cardinality = "one-to-one"
+    func = "unstack_weights"
+
+
 class OpenMany(BaseManipulator):
     cardinality = "none-to-many"
     func = "open_many"
