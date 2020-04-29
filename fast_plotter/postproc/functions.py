@@ -267,8 +267,12 @@ def stack_weights(df, drop_n_col=False):
     logger.info("Stacking weights")
     if drop_n_col:
         df.drop("n", inplace=True, axis="columns")
+    else:
+        df.set_index("n", append=True, inplace=True)
     df.columns = pd.MultiIndex.from_tuples([c.split(":") for c in df.columns], names=["systematic", ""])
     out = df.stack(0, dropna=False)
+    if not drop_n_col:
+        out.reset_index(level="n", inplace=True)
     return out
 
 
@@ -279,15 +283,32 @@ def to_datacard_inputs(df, select_data, rename_syst_vars=False):
     logger.info("Converting to datacard inputs")
     if rename_syst_vars:
         df.columns = [n.replace("_up:", "_Up:").replace("_down:", "_Down:") for n in df.columns]
-    df.set_index("n", append=True, inplace=True)
     df = stack_weights(df)
-    df.reset_index(level="n", inplace=True)
     data_mask = df.eval(select_data)
     df["content"] = df.n
     df["content"][~data_mask] = df.sumw
     df["error"] = df.content / np.sqrt(df.n)
 
-    df.drop(["n", "sumw", "sumw2"], inplace=True, axis="columns")
+
+def generic_pandas(df, func, *args, **kwargs):
+    """
+    Apply generic pandas function to each input
+    """
+    logger.info("Apply generic pandas function")
+    return getattr(df, func)(*args, **kwargs)
+
+
+def unstack_weights(df, weight_name="systematic", includes_counts=True):
+    """
+    The inverse to stack_weights
+    """
+    logger.info("Unstacking systematics")
+    if includes_counts:
+        df = df.set_index("n", append=True)
+    df = df.unstack(weight_name)
+    df.columns = ["{1}:{0}".format(*c) if c[1] else c[0] for c in df.columns]
+    if includes_counts:
+        df = df.reset_index(level="n")
     return df
 
 
