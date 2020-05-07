@@ -91,6 +91,30 @@ def test_split(binned_df):
     assert all([r[0].index.nlevels == 3 for r in results])
 
 
+def test_filter_cols(binned_df):
+    df = binned_df.index.to_frame()
+
+    result = funcs.filter_cols(df, items=["int"])
+    assert len(result.columns) == 1
+    assert result.columns[0] == "int"
+
+    result = funcs.filter_cols(df, items=["int", "cat"])
+    assert len(result.columns) == 2
+    assert set(result.columns) == set(("int", "cat"))
+
+    result = funcs.filter_cols(df, like="int")
+    assert len(result.columns) == 2
+    assert set(result.columns) == set(("int", "interval"))
+
+    result = funcs.filter_cols(df, like=["int", "cat"])
+    assert len(result.columns) == 3
+    assert set(result.columns) == set(("int", "cat", "interval"))
+
+    result = funcs.filter_cols(df, regex="^int.*")
+    assert len(result.columns) == 2
+    assert set(result.columns) == set(("int", "interval"))
+
+
 # def test_reorder_dimensions():
 #     #def reorder_dimensions(df, order):
 #     pass
