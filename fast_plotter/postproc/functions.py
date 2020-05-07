@@ -290,6 +290,8 @@ def to_datacard_inputs(df, select_data, rename_syst_vars=False):
     df["content"] = df.n
     df["content"][~data_mask] = df.sumw
     df["error"] = df.content / np.sqrt(df.n)
+    df.drop(["n", "sumw", "sumw2"], inplace=True, axis="columns")
+    return df
 
 
 def generic_pandas(df, func, *args, **kwargs):
