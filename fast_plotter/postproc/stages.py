@@ -111,6 +111,11 @@ class AssignCol(BaseManipulator):
     func = "assign_col"
 
 
+class FilterCols(BaseManipulator):
+    cardinality = "one-to-one"
+    func = "filter_cols"
+
+
 class AssignDim(BaseManipulator):
     cardinality = "one-to-one"
     func = "assign_dim"

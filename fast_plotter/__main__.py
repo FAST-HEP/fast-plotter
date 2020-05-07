@@ -6,6 +6,7 @@ import six
 import logging
 import matplotlib
 matplotlib.use('Agg')
+matplotlib.rcParams.update({'figure.autolayout': True})
 from .version import __version__ # noqa
 from .utils import read_binned_df, weighting_vars # noqa
 from .utils import decipher_filename, mask_rows  # noqa
@@ -134,8 +135,9 @@ def process_one_file(infile, args):
     return ran_ok
 
 
-def dress_main_plots(plots, annotations=[], yscale=None, ylabel=None, legend={}, limits={}, **kwargs):
-    for main_ax, _ in plots.values():
+def dress_main_plots(plots, annotations=[], yscale=None, ylabel=None, legend={},
+                     limits={}, xtickrotation=None, **kwargs):
+    for main_ax, summary_ax in plots.values():
         add_annotations(annotations, main_ax)
         if yscale:
             main_ax.set_yscale(yscale)
@@ -151,6 +153,8 @@ def dress_main_plots(plots, annotations=[], yscale=None, ylabel=None, legend={},
                     getattr(main_ax, "set_%slim" % axis)(*lims)
             elif lims.endswith("%"):
                 main_ax.margins(**{axis: float(lims[:-1])})
+        if xtickrotation:
+            matplotlib.pyplot.xticks(rotation=xtickrotation)
 
 
 def save_plots(infile, weight, plots, outdir, extensions):

@@ -152,7 +152,31 @@ def keep_specific_bins(df, axis, keep, expansions={}):
     return out_df
 
 
-def combine_cols(df, format_strings):
+def filter_cols(df, items=None, like=None, regex=None, drop_not_keep=False):
+    """Filter out columns you want to keep.
+
+    Parameters:
+      items (list-like): A list of column names to filter with
+      like (str, list[string]): A string or list of strings which will filter
+            columns where they are found in the column name
+      regex (str): A regular expression to match column names to
+      drop_not_keep (bool): Inverts the selection if true so that matched columns are dropped
+    """
+    if not like or not isinstance(like, (tuple, list)):
+        df_filtered = df.filter(items=items, like=like, regex=regex)
+    elif like:
+        if items and like:
+            raise RuntimeError("Can only use one of 'items', 'like', or 'regex'")
+        filtered = [set(col for col in df.columns if i in col) for i in like]
+        filtered = set.union(*filtered)
+        df_filtered = df.filter(items=filtered, regex=regex)
+
+    if drop_not_keep:
+        return df.drop(df_filtered.columns)
+    return df_filtered
+
+
+def combine_cols(df, format_strings, as_index=[]):
     """Combine columns together using format strings"""
     logger.info("Combining columns based on: %s", str(format_strings))
     result_names = list(format_strings.keys())
@@ -166,6 +190,8 @@ def combine_cols(df, format_strings):
     results.columns = result_names
     new_df = new_df.assign(**results)
     new_df.set_index(index, inplace=True, drop=True)
+    if as_index:
+        new_df.set_index(as_index, inplace=True, append=True)
     return new_df
 
 
@@ -288,6 +314,8 @@ def to_datacard_inputs(df, select_data, rename_syst_vars=False):
     df["content"] = df.n
     df["content"][~data_mask] = df.sumw
     df["error"] = df.content / np.sqrt(df.n)
+    df.drop(["n", "sumw", "sumw2"], inplace=True, axis="columns")
+    return df
 
 
 def generic_pandas(df, func, *args, **kwargs):
