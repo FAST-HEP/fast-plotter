@@ -152,7 +152,7 @@ def keep_specific_bins(df, axis, keep, expansions={}):
     return out_df
 
 
-def combine_cols(df, format_strings):
+def combine_cols(df, format_strings, as_index=[]):
     """Combine columns together using format strings"""
     logger.info("Combining columns based on: %s", str(format_strings))
     result_names = list(format_strings.keys())
@@ -166,6 +166,8 @@ def combine_cols(df, format_strings):
     results.columns = result_names
     new_df = new_df.assign(**results)
     new_df.set_index(index, inplace=True, drop=True)
+    if as_index:
+        new_df.set_index(as_index, inplace=True, append=True)
     return new_df
 
 
