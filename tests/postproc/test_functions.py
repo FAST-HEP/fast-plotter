@@ -143,9 +143,24 @@ def test_filter_cols(binned_df):
 #     #def merge(dfs):
 #     pass
 
-# def test_multiply_values():
-#     #def multiply_values(df, constant=0, mapping={}, weight_by_dataframes=[], apply_if=None):
-#     pass
+def test_multiply_values(binned_df):
+    result = funcs.multiply_values(binned_df, constant=3)
+    assert np.array_equal(result.a, np.arange(len(binned_df)) * 3)
+    assert np.array_equal(result.b, binned_df.b)
+
+    result = funcs.multiply_values(binned_df, apply_if="int % 2 == 0", constant=3)
+    assert np.array_equal(result.a, np.arange(len(binned_df)) * np.repeat([3, 1, 3, 1], 10))
+    assert np.array_equal(result.b, binned_df.b)
+
+    result = funcs.multiply_values(binned_df, mapping={"int % 2 == 0": 3, "int % 2 == 1": 7.2})
+    assert np.array_equal(result.a, np.arange(len(binned_df)) * np.repeat([3, 7.2, 3, 7.2], 10))
+    assert np.array_equal(result.b, binned_df.b)
+
+    result = funcs.multiply_values(binned_df, mapping={"cat=='foo'": 1.2, "cat=='bar'": 19})
+    tiled_vals = np.tile(np.repeat([1.2, 19], 5), 4)
+    assert np.array_equal(result.a, np.arange(len(binned_df)) * tiled_vals)
+    assert np.array_equal(result.b, binned_df.b)
+
 
 # def test_multiply_dataframe():
 #     #def multiply_dataframe(df, multiply_df, use_column=None):
