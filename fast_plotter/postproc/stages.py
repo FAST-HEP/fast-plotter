@@ -131,6 +131,11 @@ class MultiplyValues(BaseManipulator):
     func = "multiply_values"
 
 
+class ScaleDatasets(BaseManipulator):
+    cardinality = "one-to-one"
+    func = "scale_datasets"
+
+
 class NormaliseGroup(BaseManipulator):
     cardinality = "one-to-one"
     func = "normalise_group"

@@ -3,6 +3,7 @@ import six
 import re
 import numpy as np
 import pandas as pd
+from .scale_datasets import prepare_datasets_scale_factor
 import logging
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -410,6 +411,15 @@ def multiply_dataframe(df, multiply_df, use_column=None):
     else:
         out = df * multiply_df
     return out
+
+
+def scale_datasets(df, use_column=None, curator_cfg, multiply_by=[], divide_by=[], dataset_col="dataset", eventtype="mc"):
+    """
+    Pull fields from a fast-curator config for datasets, and use these to normalise inputs
+    """
+    scale = prepare_datasets_scale_factor(curator_cfg, multiply_by, divide_by, dataset_col, eventtype)
+    result = multiply_dataframe(df, scale, use_column=use_column)
+    return result
 
 
 def normalise_group(df, groupby_dimensions, apply_if=None, use_column=None):
