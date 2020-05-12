@@ -382,17 +382,21 @@ def multiply_values(df, constant=0, mapping={}, weight_by_dataframes=[], apply_i
         if mask.dtype.kind != "b":
             msg = "'apply_if' statement doesn't return a boolean: %s"
             raise ValueError(msg % apply_if)
+        index = df.index
         ignored = df.loc[~mask]
         df = df.loc[mask]
     if mapping:
-        raise NotImplementedError("'mapping' option not yet implemented")
+        for select, value in mapping.items():
+            df = multiply_values(df, constant=value, apply_if=select)
     if weight_by_dataframes:
         for mul_df in weight_by_dataframes:
             df = multiply_dataframe(df, mul_df)
     if constant:
-        df = df * constant
+        numeric_cols = df.select_dtypes('number')
+        df = df.assign(**numeric_cols.multiply(constant))
     if apply_if:
-        df = pd.concat([df, ignored])
+        df = pd.concat([df, ignored]).reindex(index=index)
+
     return df
 
 
