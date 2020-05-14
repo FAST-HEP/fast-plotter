@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.0] - 2020-05-14
+### Added
+- Post-processing functions that interact with curator to apply or rebin datasets, PR #36 [@benkrikler](https://github.com/benkrikler)
+
 ## [0.6.5] - 2020-05-12
 ### Added
 - Implement the multiply_values with a mapping, PR #35 [@benkrikler](https://github.com/benkrikler)

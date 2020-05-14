@@ -12,5 +12,5 @@ def split_version(version):
     return tuple(result)
 
 
-__version__ = '0.6.5'
+__version__ = '0.7.0'
 version_info = split_version(__version__) # noqa
