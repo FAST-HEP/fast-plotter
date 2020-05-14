@@ -3,7 +3,7 @@ import six
 import re
 import numpy as np
 import pandas as pd
-from .scale_datasets import prepare_datasets_scale_factor
+from .scale_datasets import prepare_datasets_scale_factor, make_dataset_map
 import logging
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -101,6 +101,18 @@ def rebin(df, axis, mapping, ignore_when_combining=None, rename=None, drop_other
         out_df.index.set_names(rename, level=replacements[0], inplace=True)
 
     return out_df
+
+
+def rebin_by_curator_cfg(df, curator_cfg, map_from="name", map_to="eventtype",
+                        column_from="dataset", column_to=None,
+                         default_from=None, default_to=None, error_all_missing=True):
+    mapping = make_dataset_map(curator_cfg,
+                               map_from=map_from, map_to=map_to,
+                               default_from=default_from,
+                               default_to=default_to,
+                               error_all_missing=error_all_missing)
+    df = rebin(df, axis=column_from, mapping=mapping, rename=column_to)
+    return df
 
 
 def split_dimension(df, axis, delimeter=";"):
@@ -401,24 +413,25 @@ def multiply_values(df, constant=0, mapping={}, weight_by_dataframes=[], apply_i
     return df
 
 
-def multiply_dataframe(df, multiply_df, use_column=None):
+def multiply_dataframe(df, multiply_df, use_column=None, level=None):
     if isinstance(multiply_df, six.string_types):
         multiply_df = open_many([multiply_df], return_meta=False)[0]
     if use_column is not None:
         multiply_df = multiply_df[use_column]
     if isinstance(multiply_df, pd.Series):
-        out = df.mul(multiply_df, axis=0)
+        out = df.mul(multiply_df, axis=0, level=level)
     else:
-        out = df * multiply_df
+        out = df.mul(multiply_df, level=level)
     return out
 
 
-def scale_datasets(df, use_column=None, curator_cfg, multiply_by=[], divide_by=[], dataset_col="dataset", eventtype="mc"):
+def scale_datasets(df, curator_cfg, multiply_by=[], divide_by=[],
+                   dataset_col="dataset", eventtype="mc", use_column=None):
     """
     Pull fields from a fast-curator config for datasets, and use these to normalise inputs
     """
     scale = prepare_datasets_scale_factor(curator_cfg, multiply_by, divide_by, dataset_col, eventtype)
-    result = multiply_dataframe(df, scale, use_column=use_column)
+    result = multiply_dataframe(df, scale, use_column=use_column, level=dataset_col)
     return result
 
 

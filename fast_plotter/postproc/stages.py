@@ -136,6 +136,11 @@ class ScaleDatasets(BaseManipulator):
     func = "scale_datasets"
 
 
+class RebinByCuratorCfg(BaseManipulator):
+    cardinality = "one-to-one"
+    func = "rebin_by_curator_cfg"
+
+
 class NormaliseGroup(BaseManipulator):
     cardinality = "one-to-one"
     func = "normalise_group"
