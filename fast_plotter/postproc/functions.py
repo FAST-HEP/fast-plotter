@@ -3,7 +3,7 @@ import six
 import re
 import numpy as np
 import pandas as pd
-from .scale_datasets import prepare_datasets_scale_factor, make_dataset_map
+from .query_curator import prepare_datasets_scale_factor, make_dataset_map
 import logging
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
