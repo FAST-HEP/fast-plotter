@@ -17,7 +17,7 @@ def prepare_datasets_scale_factor(curator_cfg, multiply_by=[], divide_by=[], dat
             sfs[dataset.name] = 1
             continue
 
-        scale = 1 
+        scale = 1
         for m in multiply_by:
             scale *= float(getattr(dataset, m))
         for d in divide_by:

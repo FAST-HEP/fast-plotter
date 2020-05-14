@@ -104,7 +104,7 @@ def rebin(df, axis, mapping, ignore_when_combining=None, rename=None, drop_other
 
 
 def rebin_by_curator_cfg(df, curator_cfg, map_from="name", map_to="eventtype",
-                        column_from="dataset", column_to=None,
+                         column_from="dataset", column_to=None,
                          default_from=None, default_to=None, error_all_missing=True):
     mapping = make_dataset_map(curator_cfg,
                                map_from=map_from, map_to=map_to,
