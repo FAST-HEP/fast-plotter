@@ -71,7 +71,9 @@ def main(args=None):
     return 0 if ran_ok else 1
 
 
-def process_cfg(cfg_file, args):
+def process_cfg(cfg_file, args, make_arg_parser=None):
+    if not make_arg_parser:
+        make_arg_parser = arg_parser
     import yaml
     from argparse import Namespace
     from string import Template
@@ -79,7 +81,7 @@ def process_cfg(cfg_file, args):
         cfg = yaml.safe_load(infile)
     # Only way to neatly allow cmd-line args to override config and handle
     # defaults seems to be:
-    parser = arg_parser()
+    parser = make_arg_parser()
     parser.set_defaults(**cfg)
     args = parser.parse_args()
     if args.variables:

@@ -217,6 +217,12 @@ def standardize_values(x, y_values=[], fill_val=0, expected_xs=None, add_ends=Tr
     if expected_xs is not None:
         x, y_values = add_missing_vals(x, expected_xs, y_values=y_values, fill_val=fill_val)
 
+    ticks = None
+    if x.dtype.kind not in 'biufc' and not isinstance(x[0], pd.Interval):
+        x, ticks = np.arange(len(x)), x
+        fill_val = [fill_val] * len(y_values) + [""]
+        y_values.append(ticks)
+
     if isinstance(x[0], pd.Interval):
         if isinstance(x, pd.arrays.IntervalArray) and not x.is_non_overlapping_monotonic:
             return (x,) + tuple(y_values)
@@ -232,7 +238,11 @@ def standardize_values(x, y_values=[], fill_val=0, expected_xs=None, add_ends=Tr
         if add_ends:
             x, y_values = pad_ends(x, y_values=y_values, fill_val=fill_val)
 
-    return (x,) + tuple(y_values)
+    if ticks is not None:
+        ticks = y_values[-1]
+        y_values = y_values[:-1]
+
+    return (x, ticks) + tuple(y_values)
 
 
 def intervals_to_breaks(x, y_values, fill_val=None):
@@ -305,8 +315,13 @@ def pad_ends(x, y_values=[], fill_val=0):
     if len(x) > 1:
         mean_width = np.diff(x).mean()
 
+    if isinstance(fill_val, (tuple, list)):
+        assert len(y_values) == len(fill_val), "fill_val must be a scalar, or an iterable with length equal to y_values"
+    else:
+        fill_val = [fill_val] * len(y_values)
+
     x = np.concatenate((x[0:1] - mean_width, x, x[-1:] + mean_width), axis=0)
-    new_values = [np.concatenate(([fill_val], y, [fill_val]), axis=0) for y in y_values]
+    new_values = [np.concatenate(([f], y, [f]), axis=0) for y, f in zip(y_values, fill_val)]
     return x, tuple(new_values)
 
 
@@ -315,7 +330,7 @@ def plot_1d_many(df, prefix="", data="data", signal=None, dataset_col="dataset",
                  kind_data="scatter", kind_sims="fill-error-last", kind_signal="line",
                  scale_sims=None, summary="ratio-error-both", colourmap="nipy_spectral",
                  dataset_order=None, figsize=(5, 6), show_over_underflow=False,
-                 dataset_colours=None, err_from_sumw2=False, **kwargs):
+                 dataset_colours=None, err_from_sumw2=False, data_legend="Data", **kwargs):
     y = "sumw"
     yvar = "sumw2"
     yerr = "err"
@@ -356,7 +371,7 @@ def plot_1d_many(df, prefix="", data="data", signal=None, dataset_col="dataset",
     x_axis = x_axis[0]
 
     config = [(in_df_sims, plot_sims, kind_sims, "Monte Carlo", "plot_sims"),
-              (in_df_data, plot_data, kind_data, "Data", "plot_data"),
+              (in_df_data, plot_data, kind_data, data_legend, "plot_data"),
               (in_df_signal, plot_signal, kind_signal, "Signal", "plot_signal"),
               ]
     for df, combine, style, label, var_name in config:
@@ -440,7 +455,8 @@ def plot_ratio(data, sims, x, y, yerr, ax, error="both", ylim=[0., 2]):
 
     if error == "markers":
         central, lower, upper = stats.try_root_ratio_plot(d, d_err, s, s_err)
-        x_axis, central, lower, upper = standardize_values(x_axis, y_values=(central, lower, upper), add_ends=False)
+        values = standardize_values(x_axis, y_values=(central, lower, upper), add_ends=False)
+        x_axis, ticks, central, lower, upper = values
         mask = (central != 0) & (lower != 0)
         ax.errorbar(x=x_axis[mask], y=central[mask], yerr=(lower[mask], upper[mask]),
                     fmt="o", markersize=4, color="k")
@@ -497,17 +513,14 @@ def draw(ax, method, x, ys, **kwargs):
         x = convert_intervals(x)
         expected_xs = convert_intervals(expected_xs)
 
-    if x.dtype.kind in 'biufc' or isinstance(x[0], pd.Interval):
-        values = standardize_values(x, [kwargs[y] for y in ys],
-                                    fill_val=fill_val,
-                                    add_ends=add_ends,
-                                    expected_xs=expected_xs)
-        x = values[0]
-        new_ys = values[1:]
-        kwargs.update(dict(zip(ys, new_ys)))
-        ticks = None
-    else:
-        x, ticks = np.arange(len(x)), x
+    values = standardize_values(x, [kwargs[y] for y in ys],
+                                fill_val=fill_val,
+                                add_ends=add_ends,
+                                expected_xs=expected_xs)
+    x = values[0]
+    ticks = values[1]
+    new_ys = values[2:]
+    kwargs.update(dict(zip(ys, new_ys)))
     getattr(ax, method)(x=x, **kwargs)
     if ticks is not None:
         ax.set_xticks(x)
