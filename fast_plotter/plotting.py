@@ -455,7 +455,8 @@ def plot_ratio(data, sims, x, y, yerr, ax, error="both", ylim=[0., 2]):
 
     if error == "markers":
         central, lower, upper = stats.try_root_ratio_plot(d, d_err, s, s_err)
-        x_axis, ticks, central, lower, upper = standardize_values(x_axis, y_values=(central, lower, upper), add_ends=False)
+        values = standardize_values(x_axis, y_values=(central, lower, upper), add_ends=False)
+        x_axis, ticks, central, lower, upper = values
         mask = (central != 0) & (lower != 0)
         ax.errorbar(x=x_axis[mask], y=central[mask], yerr=(lower[mask], upper[mask]),
                     fmt="o", markersize=4, color="k")

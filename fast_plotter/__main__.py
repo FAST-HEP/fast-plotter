@@ -73,7 +73,7 @@ def main(args=None):
 
 def process_cfg(cfg_file, args, make_arg_parser=None):
     if not make_arg_parser:
-        make_arg_parser=arg_parser
+        make_arg_parser = arg_parser
     import yaml
     from argparse import Namespace
     from string import Template
