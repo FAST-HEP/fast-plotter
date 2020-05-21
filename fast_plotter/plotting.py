@@ -315,7 +315,7 @@ def plot_1d_many(df, prefix="", data="data", signal=None, dataset_col="dataset",
                  kind_data="scatter", kind_sims="fill-error-last", kind_signal="line",
                  scale_sims=None, summary="ratio-error-both", colourmap="nipy_spectral",
                  dataset_order=None, figsize=(5, 6), show_over_underflow=False,
-                 dataset_colours=None, err_from_sumw2=False, **kwargs):
+                 dataset_colours=None, err_from_sumw2=False, data_legend="Data", **kwargs):
     y = "sumw"
     yvar = "sumw2"
     yerr = "err"
@@ -356,7 +356,7 @@ def plot_1d_many(df, prefix="", data="data", signal=None, dataset_col="dataset",
     x_axis = x_axis[0]
 
     config = [(in_df_sims, plot_sims, kind_sims, "Monte Carlo", "plot_sims"),
-              (in_df_data, plot_data, kind_data, "Data", "plot_data"),
+              (in_df_data, plot_data, kind_data, data_legend, "plot_data"),
               (in_df_signal, plot_signal, kind_signal, "Signal", "plot_signal"),
               ]
     for df, combine, style, label, var_name in config:
