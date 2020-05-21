@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.0] - 2020-05-22
+### Added
+- Useability tweaks for plotting
+
+### Fixed
+- Edge bins when labels are alphanumeric are now full-width (not half-width)
+
+### Dropped
+- No longer support python 2 (since we need Pandas >= 1.0)
+
 ## [0.7.0] - 2020-05-14
 ### Added
 - Post-processing functions that interact with curator to apply or rebin datasets, PR #36 [@benkrikler](https://github.com/benkrikler)
