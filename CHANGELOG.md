@@ -22,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.6.3] - 2020-04-29
 ### Added
+- Add ability to rotate x-axis tick labels from config
 - Add GenericPandas and UnstackWeights stages, PR #33 [@benkrikler](https://github.com/benkrikler)
 
 ## [0.6.2] - 2020-04-21
