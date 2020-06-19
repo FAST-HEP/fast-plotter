@@ -51,9 +51,10 @@ def test_keep_bins(binned_df):
     assert len(result) == 40
 
 
-# def test_keep_specific_bins():
-#     #def keep_specific_bins(df, axis, keep, expansions={}):
-#     pass
+def test_keep_specific_bins(binned_df):
+    #def keep_specific_bins(df, axis, keep, expansions={}):
+    result = funcs.keep_specific_bins(binned_df, axis=["int", "cat"], keep={"0": ["foo"], "1": ["bar"]})
+    assert len(result) == 10
 
 
 def test_combine_cols_AND_split_dimension(binned_df):
