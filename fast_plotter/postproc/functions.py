@@ -159,7 +159,11 @@ def keep_specific_bins(df, axis, keep, expansions={}):
         expanded = [keys + (new, ) for keys, vals in expanded for new in vals]
         expanded = [delim.join(vals) for vals in expanded]
 
-    expanded = [k.format(**{name: v}) for name, vals in expansions.items() for v in vals for k in expanded]
+    if expansions:
+        replacements = [dict()]
+        for name, vals in expansions.items():
+            replacements = [{name: v, **r} for v in vals for r in replacements]
+        expanded = [e.format(**r) for r in replacements for e in expanded]
     out_df = keep_bins(out_df, delim.join(axis), expanded)
     out_df = split_dimension(out_df, axis, delimeter=delim)
     return out_df

@@ -51,9 +51,23 @@ def test_keep_bins(binned_df):
     assert len(result) == 40
 
 
-# def test_keep_specific_bins():
-#     #def keep_specific_bins(df, axis, keep, expansions={}):
-#     pass
+def test_keep_specific_bins(binned_df):
+    keep = {"0": ["foo"], "1": ["bar"]}
+    result = funcs.keep_specific_bins(binned_df, axis=["int", "cat"], keep=keep)
+    assert len(result) == 10
+
+    result = funcs.keep_specific_bins(binned_df, axis=["int", "cat"], keep=keep, expansions=[])
+    assert len(result) == 10
+
+    expansions = dict(one=["bar"])
+    keep = {"0": ["foo"], "1": ["{one}"]}
+    result = funcs.keep_specific_bins(binned_df, axis=["int", "cat"], keep=keep, expansions=expansions)
+    assert len(result) == 10
+
+    expansions = dict(one=["bar"], two=["foo", "bar"])
+    keep = {"0": ["{two}"], "1": ["{one}"]}
+    result = funcs.keep_specific_bins(binned_df, axis=["int", "cat"], keep=keep, expansions=expansions)
+    assert len(result) == 15
 
 
 def test_combine_cols_AND_split_dimension(binned_df):
