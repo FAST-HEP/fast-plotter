@@ -52,7 +52,6 @@ def test_keep_bins(binned_df):
 
 
 def test_keep_specific_bins(binned_df):
-    #def keep_specific_bins(df, axis, keep, expansions={}):
     keep = {"0": ["foo"], "1": ["bar"]}
     result = funcs.keep_specific_bins(binned_df, axis=["int", "cat"], keep=keep)
     assert len(result) == 10
@@ -60,12 +59,12 @@ def test_keep_specific_bins(binned_df):
     result = funcs.keep_specific_bins(binned_df, axis=["int", "cat"], keep=keep, expansions=[])
     assert len(result) == 10
 
-    expansions=dict(one=["bar"])
+    expansions = dict(one=["bar"])
     keep = {"0": ["foo"], "1": ["{one}"]}
     result = funcs.keep_specific_bins(binned_df, axis=["int", "cat"], keep=keep, expansions=expansions)
     assert len(result) == 10
 
-    expansions=dict(one=["bar"], two=["foo", "bar"])
+    expansions = dict(one=["bar"], two=["foo", "bar"])
     keep = {"0": ["{two}"], "1": ["{one}"]}
     result = funcs.keep_specific_bins(binned_df, axis=["int", "cat"], keep=keep, expansions=expansions)
     assert len(result) == 15
