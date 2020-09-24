@@ -23,7 +23,7 @@ def change_brightness(color, amount):
     return colorsys.hls_to_rgb(c[0], 1 - amount * (1 - c[1]), c[2])
 
 
-def plot_all(df, project_1d=True, project_2d=True, data="data", signal=None, dataset_col="dataset",
+def plot_all(df, project_1d=True, project_2d=True, data="data", signal=None, other_dset=None, dataset_col="dataset",
              yscale="log", lumi=None, annotations=[], dataset_order=None,
              continue_errors=True, bin_variable_replacements={}, colourmap="nipy_spectral",
              figsize=None, **kwargs):
@@ -50,7 +50,7 @@ def plot_all(df, project_1d=True, project_2d=True, data="data", signal=None, dat
                 projected, bin_variable_replacements)
             projected = utils.order_datasets(projected, "sum-ascending", dataset_col)
             try:
-                plot = plot_1d_many(projected, data=data, signal=signal,
+                plot = plot_1d_many(projected, data=data, signal=signal, other_dset=other_dset,
                                     dataset_col=dataset_col, scale_sims=lumi,
                                     colourmap=colourmap, dataset_order=dataset_order,
                                     figsize=figsize, **kwargs
@@ -129,7 +129,7 @@ class FillColl(object):
 
     def __call__(self, col, **kwargs):
         ax, x, y, color = self.pre_call(col)
-        if self.fill:
+        if self.fill and not self.line:
             draw(ax, "fill_between", x=x, ys=["y1"],
                  y1=y, label=col.name, expected_xs=self.expected_xs,
                  linewidth=0, color=color, **kwargs)
@@ -191,6 +191,14 @@ def actually_plot(df, x_axis, y, yerr, kind, label, ax, dataset_col="dataset",
                           dataset_order=dataset_order,
                           line=False, expected_xs=expected_xs)
         vals.iloc[:, ::-1].apply(filler, axis=0, step="mid")
+    elif kind == "fill_line":
+        filler = FillColl(n_datasets, ax=ax, fill=True, colourmap=colourmap,
+                          dataset_colours=dataset_colours,
+                          dataset_order=dataset_order, expected_xs=expected_xs)
+        vals.apply(filler, axis=0, step="mid")
+        draw(ax, "errorbar", x=df.reset_index()[x_axis], ys=["y1"], y1=y,
+             color="k", ms=3.5, fmt="o", label=label, expected_xs=expected_xs, add_ends=False)
+
     elif kind == "fill-error-last":
         actually_plot(df, x_axis, y, yerr, "fill", label, ax, dataset_colours=dataset_colours,
                       dataset_col=dataset_col, colourmap=colourmap, dataset_order=dataset_order)
@@ -296,6 +304,7 @@ def add_missing_vals(x, expected_xs, y_values=[], fill_val=0):
     """
     insert = np.isin(expected_xs, x)
     new_ys = []
+    print(y_values)
     for y in y_values:
         new = np.full_like(expected_xs, fill_val, dtype=y.dtype)
         new[insert] = y
@@ -325,12 +334,12 @@ def pad_ends(x, y_values=[], fill_val=0):
     return x, tuple(new_values)
 
 
-def plot_1d_many(df, prefix="", data="data", signal=None, dataset_col="dataset",
-                 plot_sims="stack", plot_data="sum", plot_signal=None,
-                 kind_data="scatter", kind_sims="fill-error-last", kind_signal="line",
+def plot_1d_many(df, prefix="", data="data", signal=None, other_dset=None, dataset_col="dataset",
+                 plot_sims="stack", plot_data="sum", plot_signal=None, plot_other_dset=None,
+                 kind_data="scatter", kind_sims="fill-error-last", kind_signal="line", kind_other_dset="fill_line",
                  scale_sims=None, summary="ratio-error-both", colourmap="nipy_spectral",
                  dataset_order=None, figsize=(5, 6), show_over_underflow=False,
-                 dataset_colours=None, err_from_sumw2=False, data_legend="Data", **kwargs):
+                 dataset_colours=None, err_from_sumw2=False, data_legend="Data", data_weights=False, **kwargs):
     y = "sumw"
     yvar = "sumw2"
     yerr = "err"
@@ -351,8 +360,13 @@ def plot_1d_many(df, prefix="", data="data", signal=None, dataset_col="dataset",
             in_df_sims, data_labels=signal, dataset_level=dataset_col)
     else:
         in_df_signal = None
+    if other_dset:
+        in_df_other, in_df_sims = utils.split_data_sims(
+            df, data_labels=other_dset, dataset_level=dataset_col) 
+    else:
+        in_df_other = None 
 
-    if in_df_data is None or in_df_sims is None:
+    if in_df_data is None or in_df_sims is None or in_df_other is not None:
         summary = None
     if not summary:
         fig, main_ax = plt.subplots(1, 1, figsize=figsize)
@@ -373,6 +387,7 @@ def plot_1d_many(df, prefix="", data="data", signal=None, dataset_col="dataset",
     config = [(in_df_sims, plot_sims, kind_sims, "Monte Carlo", "plot_sims"),
               (in_df_data, plot_data, kind_data, data_legend, "plot_data"),
               (in_df_signal, plot_signal, kind_signal, "Signal", "plot_signal"),
+              (in_df_other, plot_other_dset, kind_other_dset, "Other_dset", "plot_other_dset"),
               ]
     for df, combine, style, label, var_name in config:
         if df is None or len(df) == 0:
@@ -513,6 +528,8 @@ def draw(ax, method, x, ys, **kwargs):
         x = convert_intervals(x)
         expected_xs = convert_intervals(expected_xs)
 
+    for y in ys:
+        print("kwargs[", y, "]: ", kwargs[y])
     values = standardize_values(x, [kwargs[y] for y in ys],
                                 fill_val=fill_val,
                                 add_ends=add_ends,
