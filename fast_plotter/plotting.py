@@ -162,7 +162,7 @@ class BarColl(FillColl):
 
 
 def actually_plot(df, x_axis, y, yerr, kind, label, ax, dataset_col="dataset",
-                  dataset_colours=None, colourmap="nipy_spectral", dataset_order=None):
+                  dataset_colours=None, colourmap="nipy_spectral", dataset_order=None, other_dset=None):
     expected_xs = df.index.unique(x_axis).values
     if kind == "scatter":
         draw(ax, "errorbar", x=df.reset_index()[x_axis], ys=["y", "yerr"], y=df[y], yerr=df[yerr],
@@ -196,8 +196,8 @@ def actually_plot(df, x_axis, y, yerr, kind, label, ax, dataset_col="dataset",
                           dataset_colours=dataset_colours,
                           dataset_order=dataset_order, expected_xs=expected_xs)
         vals.apply(filler, axis=0, step="mid")
-        draw(ax, "errorbar", x=df.reset_index()[x_axis], ys=["y1"], y1=y,
-             color="k", ms=3.5, fmt="o", label=label, expected_xs=expected_xs, add_ends=False)
+        draw(ax, "errorbar", x=df.reset_index()[x_axis], ys=["y", "yerr"], y=df['sumw'], yerr=df["sumw2"],
+             color="k", ms=3.5, fmt="o", label=label, expected_xs=expected_xs, add_ends=False, other_dset=other_dset)
 
     elif kind == "fill-error-last":
         actually_plot(df, x_axis, y, yerr, "fill", label, ax, dataset_colours=dataset_colours,
@@ -214,7 +214,7 @@ def actually_plot(df, x_axis, y, yerr, kind, label, ax, dataset_col="dataset",
         raise RuntimeError("Unknown value for 'kind', '{}'".format(kind))
 
 
-def standardize_values(x, y_values=[], fill_val=0, expected_xs=None, add_ends=True):
+def standardize_values(x, y_values=[], fill_val=0, expected_xs=None, add_ends=True, other_dset=None):
     """
     Standardize a set of arrays so they're ready to be plotted directly for matplotlib
 
@@ -222,7 +222,7 @@ def standardize_values(x, y_values=[], fill_val=0, expected_xs=None, add_ends=Tr
     if any requested X values are missing:
         insert dummy values into X and Y values at the right location
     """
-    if expected_xs is not None:
+    if expected_xs is not None and other_dset is None:
         x, y_values = add_missing_vals(x, expected_xs, y_values=y_values, fill_val=fill_val)
 
     ticks = None
@@ -304,9 +304,8 @@ def add_missing_vals(x, expected_xs, y_values=[], fill_val=0):
     """
     insert = np.isin(expected_xs, x)
     new_ys = []
-    print(y_values)
     for y in y_values:
-        new = np.full_like(expected_xs, fill_val, dtype=y.dtype)
+        new=np.full_like(expected_xs, fill_val, dtype=y.dtype)
         new[insert] = y
         new_ys.append(new)
     if isinstance(expected_xs, (pd.Index, pd.MultiIndex)):
@@ -375,7 +374,6 @@ def plot_1d_many(df, prefix="", data="data", signal=None, other_dset=None, datas
             2, 1, gridspec_kw={"height_ratios": (3, 1)}, sharex=True, figsize=figsize)
         fig.subplots_adjust(hspace=.1)
         main_ax, summary_ax = ax
-
     x_axis = [col for col in df.index.names if col != dataset_col]
     if len(x_axis) > 1:
         raise RuntimeError("Too many dimensions to plot things in 1D")
@@ -396,7 +394,7 @@ def plot_1d_many(df, prefix="", data="data", signal=None, other_dset=None, datas
         actually_plot(merged, x_axis=x_axis, y=y, yerr=yerr, kind=style,
                       label=label, ax=main_ax, dataset_col=dataset_col,
                       dataset_colours=dataset_colours,
-                      colourmap=colourmap, dataset_order=dataset_order)
+                      colourmap=colourmap, dataset_order=dataset_order, other_dset=other_dset)
     main_ax.set_xlabel(x_axis)
 
     if not summary:
@@ -516,7 +514,7 @@ def is_intervals(vals):
     return False
 
 
-def draw(ax, method, x, ys, **kwargs):
+def draw(ax, method, x, ys, other_dset=None, **kwargs):
     fill_val = kwargs.pop("fill_val", 0)
     expected_xs = kwargs.pop("expected_xs", None)
     add_ends = kwargs.pop("add_ends", True)
@@ -529,11 +527,11 @@ def draw(ax, method, x, ys, **kwargs):
         expected_xs = convert_intervals(expected_xs)
 
     for y in ys:
-        print("kwargs[", y, "]: ", kwargs[y])
     values = standardize_values(x, [kwargs[y] for y in ys],
                                 fill_val=fill_val,
                                 add_ends=add_ends,
-                                expected_xs=expected_xs)
+                                expected_xs=expected_xs,
+                                other_dset=other_dset)
     x = values[0]
     ticks = values[1]
     new_ys = values[2:]
