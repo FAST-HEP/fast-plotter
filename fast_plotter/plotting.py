@@ -359,13 +359,13 @@ def plot_1d_many(df, prefix="", data="data", signal=None, other_dset=None, datas
     if not show_over_underflow:
         df = utils.drop_over_underflow(df)
     in_df_data, in_df_sims = utils.split_data_sims(
-        df, data_labels=data, dataset_level=dataset_col)
-    if scale_sims is not None:
+        df, data_labels=data, dataset_level=dataset_col, one_dtype=one_dtype)
+    if scale_sims is not None and in_df_sims is not None:
         in_df_sims[y] *= scale_sims
         in_df_sims[yvar] *= scale_sims * scale_sims
     if signal:
         in_df_signal, in_df_sims = utils.split_data_sims(
-            in_df_sims, data_labels=signal, dataset_level=dataset_col)
+            in_df_sims, data_labels=signal, dataset_level=dataset_col, one_dtype=one_dtype)
     else:
         in_df_signal = None
     if other_dset:
