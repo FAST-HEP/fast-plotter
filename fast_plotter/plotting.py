@@ -138,7 +138,7 @@ class FillColl(object):
             if self.fill:
                 label = None
                 style = "-"
-                if self.other_dset:
+                if self.other_dset is not None:
                     color = color
                     width = 1 
                 else:
@@ -222,7 +222,7 @@ def actually_plot(df, x_axis, y, yerr, kind, label, ax, dataset_col="dataset",
         raise RuntimeError("Unknown value for 'kind', '{}'".format(kind))
 
 
-def standardize_values(x, y_values=[], fill_val=0, expected_xs=None, add_ends=True, other_dset=None):
+def standardize_values(x, y_values=[], fill_val=0, expected_xs=None, add_ends=True):
     """
     Standardize a set of arrays so they're ready to be plotted directly for matplotlib
 
@@ -533,19 +533,17 @@ def draw(ax, method, x, ys, other_dset=None, **kwargs):
     else:
         x = convert_intervals(x)
         expected_xs = convert_intervals(expected_xs)
-    if other_dset is not None:
+    if other_dset is None:
+        values = standardize_values(x, [kwargs[y] for y in ys],
+                                   fill_val=fill_val,
+                                   add_ends=add_ends,
+                                   expected_xs=expected_xs)
+    else:
         for y in ys:
             values = standardize_values(x, [kwargs[y] for y in ys],
                                        fill_val=fill_val,
                                        add_ends=add_ends,
-                                       expected_xs=expected_xs,
-                                       other_dset=other_dset)
-    else:
-        values = standardize_values(x, [kwargs[y] for y in ys],
-                                   fill_val=fill_val,
-                                   add_ends=add_ends,
-                                   expected_xs=expected_xs,
-                                   other_dset=other_dset)
+                                       expected_xs=expected_xs)
     x = values[0]
     ticks = values[1]
     new_ys = values[2:]
