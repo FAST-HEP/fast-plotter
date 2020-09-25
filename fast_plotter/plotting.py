@@ -24,7 +24,7 @@ def change_brightness(color, amount):
 
 
 def plot_all(df, project_1d=True, project_2d=True, data="data", signal=None, other_dset=None, 
-             one_dset_type=False, dataset_col="dataset", yscale="log", lumi=None, annotations=[], 
+             one_dtype=False, dataset_col="dataset", yscale="log", lumi=None, annotations=[], 
              dataset_order=None, continue_errors=True, bin_variable_replacements={}, 
              colourmap="nipy_spectral", figsize=None, **kwargs):
     figures = {}
@@ -51,7 +51,7 @@ def plot_all(df, project_1d=True, project_2d=True, data="data", signal=None, oth
             projected = utils.order_datasets(projected, "sum-ascending", dataset_col)
             try:
                 plot = plot_1d_many(projected, data=data, signal=signal, other_dset=other_dset,
-                                    one_dset_type=one_dset_type, dataset_col=dataset_col, scale_sims=lumi,
+                                    one_dtype=one_dtype, dataset_col=dataset_col, scale_sims=lumi,
                                     colourmap=colourmap, dataset_order=dataset_order,
                                     figsize=figsize, **kwargs
                                     )
@@ -130,7 +130,7 @@ class FillColl(object):
 
     def __call__(self, col, **kwargs):
         ax, x, y, color = self.pre_call(col)
-        if self.fill and not self.other_dset:
+        if self.fill and self.other_dset is None:
             draw(ax, "fill_between", x=x, ys=["y1"],
                  y1=y, label=col.name, expected_xs=self.expected_xs,
                  linewidth=0, color=color, **kwargs)
@@ -344,7 +344,7 @@ def pad_ends(x, y_values=[], fill_val=0):
 def plot_1d_many(df, prefix="", data="data", signal=None, other_dset=None, dataset_col="dataset",
                  plot_sims="stack", plot_data="sum", plot_signal=None, plot_other_dset=None,
                  kind_data="scatter", kind_sims="fill-error-last", kind_signal="line", kind_other_dset="fill_line", 
-                 one_dset_type=False, scale_sims=None, summary="ratio-error-both", colourmap="nipy_spectral",
+                 one_dtype=False, scale_sims=None, summary="ratio-error-both", colourmap="nipy_spectral",
                  dataset_order=None, figsize=(5, 6), show_over_underflow=False,
                  dataset_colours=None, err_from_sumw2=False, data_legend="Data", **kwargs):
     y = "sumw"
@@ -364,12 +364,12 @@ def plot_1d_many(df, prefix="", data="data", signal=None, other_dset=None, datas
         in_df_sims[yvar] *= scale_sims * scale_sims
     if signal:
         in_df_signal, in_df_sims = utils.split_data_sims(
-            in_df_sims, data_labels=signal, dataset_level=dataset_col, one_dset_type=one_dset_type)
+            in_df_sims, data_labels=signal, dataset_level=dataset_col)
     else:
         in_df_signal = None
     if other_dset:
         in_df_other, in_df_sims = utils.split_data_sims(
-            df, data_labels=other_dset, dataset_level=dataset_col, one_dset_type=one_dset_type)
+            df, data_labels=other_dset, dataset_level=dataset_col, one_dtype=one_dtype)
     else:
         in_df_other = None
 
@@ -533,7 +533,7 @@ def draw(ax, method, x, ys, other_dset=None, **kwargs):
     else:
         x = convert_intervals(x)
         expected_xs = convert_intervals(expected_xs)
-    if other_dset:
+    if other_dset is not None:
         for y in ys:
             values = standardize_values(x, [kwargs[y] for y in ys],
                                        fill_val=fill_val,

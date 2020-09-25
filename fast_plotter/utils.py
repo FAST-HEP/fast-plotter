@@ -69,7 +69,7 @@ def mask_rows(df, regex, level=None):
     return data_rows
 
 
-def split_df(df, first_values, level=0, one_dset_type=None):
+def split_df(df, first_values, level=0, one_dtype=False):
     if df is None:
         return None, None
     if isinstance(first_values, six.string_types):
@@ -77,7 +77,7 @@ def split_df(df, first_values, level=0, one_dset_type=None):
         first_values = [val for val in df.index.unique(level) if regex.match(val)]
     if not first_values:
         return None, df
-    if not one_dset_type: 
+    if not one_dtype: 
         second = df.drop(first_values, level=level)
         second_values = second.index.unique(level=level)
         first = df.drop(second_values, level=level)
@@ -91,8 +91,8 @@ def split_df(df, first_values, level=0, one_dset_type=None):
     return first, second
 
 
-def split_data_sims(df, data_labels=["data"], dataset_level="dataset", one_dset_type=None):
-    return split_df(df, first_values=data_labels, level=dataset_level, one_dset_type=one_dset_type)
+def split_data_sims(df, data_labels=["data"], dataset_level="dataset", one_dtype=False):
+    return split_df(df, first_values=data_labels, level=dataset_level, one_dtype=one_dtype)
 
 
 def calculate_error(df, sumw2_label="sumw2", err_label="err", inplace=True, do_rel_err=True):
