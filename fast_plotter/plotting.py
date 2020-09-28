@@ -211,10 +211,22 @@ def actually_plot(df, x_axis, y, yerr, kind, label, ax, dataset_col="dataset",
         dataset_colours =  dtype_args["colours"] if dtype_args["colours"] else dataset_colours
         options = ["alpha", "style", "width", "add_label", "add_error", "regex"]
         alpha, style, width, add_label, add_error, regex = [dtype_args[key] for key in options]
-        filler = FillColl(n_datasets, ax=ax, fill=True, colourmap=colourmap, dataset_colours=dataset_colours,
+        if "annotations" in dtype:
+            values = dtype_args['values'] if dtype_args['values'] else []
+            annotType = dtype_args["annotType"] if  dtype_args["annotType"] else "hlines"
+            z_order = dtype_args["z_order"]
+            for value in values:
+                if annotType == "hlines":
+                    plt.hlines(value, -1, len(expected_xs), colors=dataset_colours,
+                               alpha=alpha, ls=style, lw = width, zorder=z_order)
+                if annotType == "vlines":
+                    plt.vlines(value, 0, 2, colors=dataset_colours,
+                               alpha=alpha, ls=style, lw = width, zorder=z_order)
+        else:
+            filler = FillColl(n_datasets, ax=ax, fill=True, colourmap=colourmap, dataset_colours=dataset_colours,
                           dataset_order=dataset_order, expected_xs=expected_xs, other_dtypes=other_dtype_args, 
                           add_label_other=add_label, style_other=style, colour_other=dataset_colours)
-        vals.apply(filler, axis=0, step="mid")
+            vals.apply(filler, axis=0, step="mid")
         for dset in list(set(df.reset_index()[dataset_col])):
             if not re.compile(regex).match(dset):
                 continue
@@ -388,22 +400,26 @@ def plot_1d_many(df, prefix="", data="data", signal=None, dataset_col="dataset",
     else:
         in_df_signal = None
 
-    config = []
+    config_extend = []
     if other_dtype_args:
         other_dtype_args=parse_dtype_args(other_dtype_args)
         for dtype in other_dtype_args.keys():
             dtype_labels=other_dtype_args[dtype]['regex']
-            in_df_other, in_df_sims = utils.split_data_sims(
-                in_df_sims, data_labels=dtype_labels, dataset_level=dataset_col)
-            config.append((in_df_other, None, "other_dtypes", dtype_labels, "plot_other_dset", dtype))
+            if "annotations" not in dtype:
+                in_df_other, in_df_sims = utils.split_data_sims(
+                    in_df_sims, data_labels=dtype_labels, dataset_level=dataset_col)
+            else:
+                in_df_other = df.copy()
+            config_extend.append((in_df_other, None, "other_dtypes", dtype_labels, "plot_other_dset", dtype))
     else:
         in_df_other = None
 
-    config.extend([
-              (in_df_sims, plot_sims, kind_sims, "Monte Carlo", "plot_sims", None),
+    config = [(in_df_sims, plot_sims, kind_sims, "Monte Carlo", "plot_sims", None),
               (in_df_data, plot_data, kind_data, data_legend, "plot_data", None),
               (in_df_signal, plot_signal, kind_signal, "Signal", "plot_signal", None),
-              ])
+              ]
+
+    config.extend(config_extend)
 
     if in_df_data is None or in_df_sims is None or in_df_other is not None:
         summary = None
@@ -423,7 +439,7 @@ def plot_1d_many(df, prefix="", data="data", signal=None, dataset_col="dataset",
     x_axis = x_axis[0]
 
     for df, combine, style, label, var_name, dtype in config:
-        if df is None or len(df) == 0:
+        if (df is None or len(df) == 0):
             continue
         merged = _merge_datasets(df, combine, dataset_col, param_name=var_name, err_from_sumw2=err_from_sumw2)
         actually_plot(merged, x_axis=x_axis, y=y, yerr=yerr, kind=style, label=label,
@@ -548,17 +564,21 @@ def parse_dtype_args(other_dtype_args):
  
     default_dtypes={"default": {"style": "-", "alpha":0.2, "width":1, "colours":[],
                                 "add_label":True, "add_error": True}, 
-                    "annotations": {"style": "--", "alpha":1, "width":1.5, "colours":'k',
-                                    "add_label":False, "add_error": False}}
+                    "annotations": {"regex":"", "style": "-", "alpha":1, "width":1.5, 
+                                    "colours":'k', "add_label":False,
+                                    "add_error": False, "z_order":10}}
     for dtype in other_dtype_args.keys():
-        if dtype in default_dtypes.keys():
-            other_dtype_args[dtype].update(default_dtypes[dtype])
-        if dtype not in default_dtypes.keys():
-            default_specs = {key:val for key, val 
-                             in default_dtypes["default"].items() 
-                             if key not in other_dtype_args[dtype].keys()}
-            other_dtype_args[dtype].update(default_specs)
-        if 'regex' not in other_dtype_args[dtype]:
+        for def_dtype in default_dtypes.keys():
+            if def_dtype in dtype:
+                 default = def_dtype
+                 break
+        else:
+            default = "default"
+        default_specs = {key:val for key, val 
+                         in default_dtypes[default].items() 
+                         if key not in other_dtype_args[dtype].keys()}
+        other_dtype_args[dtype].update(default_specs)
+        if 'regex' not in other_dtype_args[dtype] and "annotations" not in dtype:
             raise RuntimeError("Must specify a regex for other plotting datatype to be applied to")                                
     return other_dtype_args
     
