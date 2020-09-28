@@ -25,9 +25,9 @@ def change_brightness(color, amount):
 
 
 def plot_all(df, project_1d=True, project_2d=True, data="data", signal=None, dataset_col="dataset",
-             yscale="log", lumi=None, annotations=[], dataset_order=None, continue_errors=True,
-             bin_variable_replacements={}, colourmap="nipy_spectral", figsize=None, other_dtypes={},
-             **kwargs):
+             yscale="log", lumi=None, annotations=[], dataset_order=None,
+             continue_errors=True, bin_variable_replacements={}, colourmap="nipy_spectral",
+             figsize=None, other_dtypes={}, **kwargs):
     figures = {}
 
     dimensions = utils.binning_vars(df)
@@ -47,14 +47,17 @@ def plot_all(df, project_1d=True, project_2d=True, data="data", signal=None, dat
         for dim in dimensions:
             logger.info("Making 1D Projection: " + dim)
             projected = df.groupby(level=(dim, dataset_col)).sum()
+            print("projected: ", projected)
             projected = utils.rename_index(
                 projected, bin_variable_replacements)
             projected = utils.order_datasets(projected, "sum-ascending", dataset_col)
+            print("projected: ", projected)
             try:
-                plot = plot_1d_many(projected, data=data, signal=signal, other_dtype_args=other_dtypes,
-                                    dataset_col=dataset_col, scale_sims=lumi, colourmap=colourmap,
-                                    dataset_order=dataset_order, figsize=figsize, **kwargs
-                                    )
+                plot = plot_1d_many(projected, data=data, signal=signal,
+                                    dataset_col=dataset_col, scale_sims=lumi,
+                                    colourmap=colourmap, dataset_order=dataset_order,
+                                    figsize=figsize, other_dtype_args=other_dtypes,
+                                    **kwargs)
                 figures[(("project", dim), ("yscale", yscale))] = plot
             except Exception as e:
                 if not continue_errors:
@@ -106,9 +109,10 @@ class ColorDict():
 
 
 class FillColl(object):
-    def __init__(self, n_colors=10, ax=None, fill=True, line=True, dataset_colours=None, hline="step",
+    def __init__(self, n_colors=10, ax=None, fill=True, line=True, dataset_colours=None,
                  colourmap="nipy_spectral", dataset_order=None, linewidth=0.5, expected_xs=None, 
-                 other_dtypes=False, add_label_other=True, style_other=None, width_other=None, colour_other=None):
+                 other_dtypes=False, add_label_other=True, style_other=None, width_other=None,
+                 colour_other=None):
         self.calls = -1
         self.expected_xs = expected_xs
         self.colors = ColorDict(n_colors=n_colors, order=dataset_order,
@@ -122,7 +126,6 @@ class FillColl(object):
         self.add_label_other = add_label_other
         self.style_other = style_other
         self.width_other = width_other
-        self.hline=hline
         self.colour_other=colour_other
 
     def pre_call(self, column):
@@ -147,19 +150,17 @@ class FillColl(object):
                     label = col.name if self.add_label_other else None
                     color = color if type(color)==list else self.colour_other
                     width = self.width_other
-                    hline = self.hline
                 else:
                     style = "-"
                     label = None
                     color = "k"
                     width = self.linewidth
-                    hline = self.hline
             else:
                 color = None
                 label = col.name
                 width = 2
                 style = "--"
-            draw(ax, hline, x=x, ys=["y"], y=y, expected_xs=self.expected_xs,
+            draw(ax, "step", x=x, ys=["y"], y=y, expected_xs=self.expected_xs,
                  color=color, linewidth=width, label=label, linestyle=style)
         self.calls += 1
 
@@ -176,8 +177,9 @@ class BarColl(FillColl):
         self.calls += 1
 
 
-def actually_plot(df, x_axis, y, yerr, kind, label, ax, dataset_col="dataset", dataset_colours=None, 
-                  colourmap="nipy_spectral", dataset_order=None, other_dtype_args={}, dtype=None):
+def actually_plot(df, x_axis, y, yerr, kind, label, ax, dataset_col="dataset",
+                  dataset_colours=None, colourmap="nipy_spectral",
+                  dataset_order=None, other_dtype_args={}, dtype=None):
     expected_xs = df.index.unique(x_axis).values
     if kind == "scatter":
         draw(ax, "errorbar", x=df.reset_index()[x_axis], ys=["y", "yerr"], y=df[y], yerr=df[yerr],
@@ -209,13 +211,14 @@ def actually_plot(df, x_axis, y, yerr, kind, label, ax, dataset_col="dataset", d
     elif kind == "other_dtypes":
         dtype_args = other_dtype_args[dtype]
         dataset_colours =  dtype_args["colours"] if dtype_args["colours"] else dataset_colours
-        options = ["alpha", "style", "width", "step", "add_label", "add_error", "regex"]
-        alpha, style, width, step, add_label, add_error, regex = [dtype_args[key] for key in options]
+        options = ["alpha", "style", "width", "add_label", "add_error", "regex"]
+        alpha, style, width, add_label, add_error, regex = [dtype_args[key] for key in options]
         filler = FillColl(n_datasets, ax=ax, fill=True, colourmap=colourmap, dataset_colours=dataset_colours,
                           dataset_order=dataset_order, expected_xs=expected_xs, other_dtypes=other_dtype_args, 
                           add_label_other=add_label, style_other=style, colour_other=dataset_colours)
         vals.apply(filler, axis=0, step="mid")
         for dset in list(set(df.reset_index()[dataset_col])):
+            print("dataset_colours: ", dataset_colours)
             if not re.compile(regex).match(dset):
                 continue
             if add_error:
@@ -361,11 +364,12 @@ def pad_ends(x, y_values=[], fill_val=0):
 
 
 def plot_1d_many(df, prefix="", data="data", signal=None, dataset_col="dataset",
-                 plot_sims="stack", plot_data="sum", plot_signal=None, plot_other_dtype=None,
-                 kind_data="scatter", kind_sims="fill-error-last", kind_signal="line", 
+                 plot_sims="stack", plot_data="sum", plot_signal=None,
+                 kind_data="scatter", kind_sims="fill-error-last", kind_signal="line",
                  scale_sims=None, summary="ratio-error-both", colourmap="nipy_spectral",
-                 dataset_order=None, figsize=(5, 6), show_over_underflow=False, dataset_colours=None,
-                 err_from_sumw2=False, data_legend="Data", other_dtype_args={}, **kwargs):
+                 dataset_order=None, figsize=(5, 6), show_over_underflow=False,
+                 dataset_colours=None, err_from_sumw2=False, data_legend="Data",
+                 other_dtype_args={}, **kwargs):
     y = "sumw"
     yvar = "sumw2"
     yerr = "err"
@@ -389,12 +393,15 @@ def plot_1d_many(df, prefix="", data="data", signal=None, dataset_col="dataset",
 
     config = []
     if other_dtype_args:
+        print("in_df_sims: ", in_df_sims)
         other_dtype_args=parse_dtype_args(other_dtype_args)
         for dtype in other_dtype_args.keys():
             dtype_labels=other_dtype_args[dtype]['regex']
             in_df_other, in_df_sims = utils.split_data_sims(
                 in_df_sims, data_labels=dtype_labels, dataset_level=dataset_col)
             config.append((in_df_other, None, "other_dtypes", dtype_labels, "plot_other_dset", dtype))
+    else:
+        in_df_other = None
 
     config.extend([
               (in_df_sims, plot_sims, kind_sims, "Monte Carlo", "plot_sims", None),
@@ -423,9 +430,10 @@ def plot_1d_many(df, prefix="", data="data", signal=None, dataset_col="dataset",
         if df is None or len(df) == 0:
             continue
         merged = _merge_datasets(df, combine, dataset_col, param_name=var_name, err_from_sumw2=err_from_sumw2)
-        actually_plot(merged, x_axis=x_axis, y=y, yerr=yerr, kind=style, label=label, ax=main_ax,
-                      dataset_col=dataset_col, dataset_colours=dataset_colours, colourmap=colourmap,
-                      dataset_order=dataset_order, other_dtype_args=other_dtype_args, dtype=dtype)
+        actually_plot(merged, x_axis=x_axis, y=y, yerr=yerr, kind=style, label=label,
+                      ax=main_ax, dataset_col=dataset_col, dataset_colours=dataset_colours,
+                      colourmap=colourmap, dataset_order=dataset_order,
+                      other_dtype_args=other_dtype_args, dtype=dtype)
     main_ax.set_xlabel(x_axis)
 
     if not summary:
@@ -538,9 +546,9 @@ def convert_intervals(vals):
 
 def parse_dtype_args(other_dtype_args):
     default_dtypes={"default": {"style": "-", "alpha":0.2, "width":1, "colours":[],
-                                "step":"step", "add_label":True, "add_error": True}, 
+                                "add_label":True, "add_error": True}, 
                     "annotations": {"style": "--", "alpha":1, "width":1.5, "colours":'k',
-                                   "step":"hline", "add_label":False, "add_error": False}}
+                                    "add_label":False, "add_error": False}}
     for dtype in other_dtype_args.keys():
         if dtype in default_dtypes.keys():
             other_dtype_args[dtype].update(default_dtypes[dtype])
@@ -573,17 +581,10 @@ def draw(ax, method, x, ys, other_dtype_args={}, **kwargs):
     else:
         x = convert_intervals(x)
         expected_xs = convert_intervals(expected_xs)
-    if not other_dtype_args:
-        values = standardize_values(x, [kwargs[y] for y in ys],
-                                   fill_val=fill_val,
-                                   add_ends=add_ends,
-                                   expected_xs=expected_xs)
-    else:
-        for y in ys:
-            values = standardize_values(x, [kwargs[y] for y in ys],
-                                       fill_val=fill_val,
-                                       add_ends=add_ends,
-                                       expected_xs=expected_xs)
+    values = standardize_values(x, [kwargs[y] for y in ys],
+                               fill_val=fill_val,
+                               add_ends=add_ends,
+                               expected_xs=expected_xs)
     x = values[0]
     ticks = values[1]
     new_ys = values[2:]
