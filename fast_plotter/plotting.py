@@ -412,14 +412,13 @@ def plot_1d_many(df, prefix="", data="data", signal=None, dataset_col="dataset",
 
 def _merge_datasets(df, style, dataset_col, param_name="_merge_datasets", err_from_sumw2=False):
     if style == "stack":
-        utils.calculate_error(df, do_rel_err=not err_from_sumw2)
         df = utils.stack_datasets(df, dataset_level=dataset_col)
     elif style == "sum":
         df = utils.sum_over_datasets(df, dataset_level=dataset_col)
-        utils.calculate_error(df, do_rel_err=not err_from_sumw2)
     elif style:
         msg = "'{}' must be either 'sum', 'stack' or None. Got {}"
         raise RuntimeError(msg.format(param_name, style))
+    utils.calculate_error(df, do_rel_err=not err_from_sumw2)
     return df
 
 
