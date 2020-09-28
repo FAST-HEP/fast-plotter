@@ -47,11 +47,9 @@ def plot_all(df, project_1d=True, project_2d=True, data="data", signal=None, dat
         for dim in dimensions:
             logger.info("Making 1D Projection: " + dim)
             projected = df.groupby(level=(dim, dataset_col)).sum()
-            print("projected: ", projected)
             projected = utils.rename_index(
                 projected, bin_variable_replacements)
             projected = utils.order_datasets(projected, "sum-ascending", dataset_col)
-            print("projected: ", projected)
             try:
                 plot = plot_1d_many(projected, data=data, signal=signal,
                                     dataset_col=dataset_col, scale_sims=lumi,
@@ -218,7 +216,6 @@ def actually_plot(df, x_axis, y, yerr, kind, label, ax, dataset_col="dataset",
                           add_label_other=add_label, style_other=style, colour_other=dataset_colours)
         vals.apply(filler, axis=0, step="mid")
         for dset in list(set(df.reset_index()[dataset_col])):
-            print("dataset_colours: ", dataset_colours)
             if not re.compile(regex).match(dset):
                 continue
             if add_error:
@@ -393,7 +390,6 @@ def plot_1d_many(df, prefix="", data="data", signal=None, dataset_col="dataset",
 
     config = []
     if other_dtype_args:
-        print("in_df_sims: ", in_df_sims)
         other_dtype_args=parse_dtype_args(other_dtype_args)
         for dtype in other_dtype_args.keys():
             dtype_labels=other_dtype_args[dtype]['regex']
@@ -545,6 +541,11 @@ def convert_intervals(vals):
     return vals
 
 def parse_dtype_args(other_dtype_args):
+    """
+    Read potting config to parse specifications for new dtype to plot.
+    Default dtypes are also provided
+    """
+ 
     default_dtypes={"default": {"style": "-", "alpha":0.2, "width":1, "colours":[],
                                 "add_label":True, "add_error": True}, 
                     "annotations": {"style": "--", "alpha":1, "width":1.5, "colours":'k',
@@ -582,9 +583,9 @@ def draw(ax, method, x, ys, other_dtype_args={}, **kwargs):
         x = convert_intervals(x)
         expected_xs = convert_intervals(expected_xs)
     values = standardize_values(x, [kwargs[y] for y in ys],
-                               fill_val=fill_val,
-                               add_ends=add_ends,
-                               expected_xs=expected_xs)
+                                fill_val=fill_val,
+                                add_ends=add_ends,
+                                expected_xs=expected_xs)
     x = values[0]
     ticks = values[1]
     new_ys = values[2:]
