@@ -216,12 +216,16 @@ def actually_plot(df, x_axis, y, yerr, kind, label, ax, dataset_col="dataset",
             annotType = dtype_args["annotType"] if  dtype_args["annotType"] else "hlines"
             z_order = dtype_args["z_order"]
             for value in values:
-                if annotType == "hlines":
-                    plt.hlines(value, -1, len(expected_xs), colors=dataset_colours,
+                if annotType == "hlines": 
+                    xmin, xmax = [dtype_args[key] for key in ['xmin', 'xmax']]
+                    xmax = len(expected_xs) if not xmax else xmax
+                    plt.hlines(value, xmin, xmax, colors=dataset_colours,
                                alpha=alpha, ls=style, lw = width, zorder=z_order)
                 if annotType == "vlines":
-                    plt.vlines(value, 0, 2, colors=dataset_colours,
-                               alpha=alpha, ls=style, lw = width, zorder=z_order)
+                    ymin = dtype_args['ymin']
+                    ymax = dtype_args['ymax'] if dtype_args['ymax'] else len(expected_xs)
+                    plt.vlines(value, ymin, ymax, colors=dataset_colours, alpha=alpha,
+                               ls=style, lw = width, zorder=z_order)
         else:
             filler = FillColl(n_datasets, ax=ax, fill=True, colourmap=colourmap, dataset_colours=dataset_colours,
                           dataset_order=dataset_order, expected_xs=expected_xs, other_dtypes=other_dtype_args, 
@@ -565,8 +569,8 @@ def parse_dtype_args(other_dtype_args):
     default_dtypes={"default": {"style": "-", "alpha":0.2, "width":1, "colours":[],
                                 "add_label":True, "add_error": True}, 
                     "annotations": {"regex":"", "style": "-", "alpha":1, "width":1.5, 
-                                    "colours":'k', "add_label":False,
-                                    "add_error": False, "z_order":10}}
+                                    "colours":'k', "add_label":False, "add_error": False,
+                                    "xmin":-1,"xmax":"", "ymin":0, "ymax":2, "z_order":10}}
     for dtype in other_dtype_args.keys():
         for def_dtype in default_dtypes.keys():
             if def_dtype in dtype:
