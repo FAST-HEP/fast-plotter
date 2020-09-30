@@ -109,8 +109,7 @@ class ColorDict():
 class FillColl(object):
     def __init__(self, n_colors=10, ax=None, fill=True, line=True, dataset_colours=None,
                  colourmap="nipy_spectral", dataset_order=None, linewidth=0.5, expected_xs=None, 
-                 other_dtypes=False, add_label_other=True, style_other=None, width_other=None,
-                 colour_other=None):
+                 other_dtypes=False, add_label_other=True, style_other=None, colour_other=None):
         self.calls = -1
         self.expected_xs = expected_xs
         self.colors = ColorDict(n_colors=n_colors, order=dataset_order,
@@ -123,7 +122,6 @@ class FillColl(object):
         self.other_dtypes = other_dtypes
         self.add_label_other = add_label_other
         self.style_other = style_other
-        self.width_other = width_other
         self.colour_other=colour_other
 
     def pre_call(self, column):
@@ -147,7 +145,7 @@ class FillColl(object):
                     style = self.style_other
                     label = col.name if self.add_label_other else None
                     color = color if type(color)==list else self.colour_other
-                    width = self.width_other
+                    width = self.linewidth
                 else:
                     style = "-"
                     label = None
@@ -228,8 +226,9 @@ def actually_plot(df, x_axis, y, yerr, kind, label, ax, dataset_col="dataset",
                                ls=style, lw = width, zorder=z_order)
         else:
             filler = FillColl(n_datasets, ax=ax, fill=True, colourmap=colourmap, dataset_colours=dataset_colours,
-                          dataset_order=dataset_order, expected_xs=expected_xs, other_dtypes=other_dtype_args, 
-                          add_label_other=add_label, style_other=style, colour_other=dataset_colours)
+                              dataset_order=dataset_order, expected_xs=expected_xs, linewidth = width,
+                              other_dtypes=other_dtype_args, add_label_other=add_label, style_other=style,
+                              colour_other=dataset_colours)
             vals.apply(filler, axis=0, step="mid")
         for dset in list(set(df.reset_index()[dataset_col])):
             if not re.compile(regex).match(dset):
