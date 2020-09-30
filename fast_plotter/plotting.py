@@ -215,16 +215,16 @@ def actually_plot(df, x_axis, y, yerr, kind, label, ax, dataset_col="dataset",
             values = dtype_args['values'] if dtype_args['values'] else []
             annotType = dtype_args["annotType"] if  dtype_args["annotType"] else "hlines"
             z_order = dtype_args["z_order"]
-            for value in values:
-                if annotType == "hlines": 
-                    xmin, xmax = [dtype_args[key] for key in ['xmin', 'xmax']]
-                    xmax = len(expected_xs) if not xmax else xmax
-                    plt.hlines(value, xmin, xmax, colors=dataset_colours,
-                               alpha=alpha, ls=style, lw = width, zorder=z_order)
-                if annotType == "vlines":
-                    ymin = dtype_args['ymin']
-                    ymax = dtype_args['ymax'] if dtype_args['ymax'] else len(expected_xs)
-                    plt.vlines(value, ymin, ymax, colors=dataset_colours, alpha=alpha,
+            if annotType == "hlines": 
+                xmin, xmax = [dtype_args[key] for key in ['xmin', 'xmax']]
+                xmax = len(expected_xs) if not xmax else xmax
+                plt.hlines(values, xmin, xmax, colors=dataset_colours,
+                           alpha=alpha, ls=style, lw = width, zorder=z_order)
+            if annotType == "vlines":
+                ymin = dtype_args['ymin']
+                ymax = dtype_args['ymax'] if dtype_args['ymax'] else 1
+                for value in values:
+                    plt.axvline(value, ymin, ymax, color=dataset_colours, alpha=alpha,
                                ls=style, lw = width, zorder=z_order)
         else:
             filler = FillColl(n_datasets, ax=ax, fill=True, colourmap=colourmap, dataset_colours=dataset_colours,
@@ -235,7 +235,6 @@ def actually_plot(df, x_axis, y, yerr, kind, label, ax, dataset_col="dataset",
             if not re.compile(regex).match(dset):
                 continue
             if add_error:
-               #for dset in list(set(df.reset_index(drop=True)[dataset_col])):
                color = dataset_colours[dset] if dset in dataset_colours else dataset_colours
                dset_df = df.reset_index().loc[df.reset_index()[dataset_col]==dset].reset_index()
                x = dset_df[x_axis]
@@ -570,7 +569,7 @@ def parse_dtype_args(other_dtype_args):
                                 "add_label":True, "add_error": True}, 
                     "annotations": {"regex":"", "style": "-", "alpha":1, "width":1.5, 
                                     "colours":'k', "add_label":False, "add_error": False,
-                                    "xmin":-1,"xmax":"", "ymin":0, "ymax":2, "z_order":10}}
+                                    "xmin":-1,"xmax":"", "ymin":0, "ymax":1, "z_order":10}}
     for dtype in other_dtype_args.keys():
         for def_dtype in default_dtypes.keys():
             if def_dtype in dtype:
