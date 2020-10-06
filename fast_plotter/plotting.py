@@ -27,7 +27,7 @@ def change_brightness(color, amount):
 def plot_all(df, project_1d=True, project_2d=True, data="data", signal=None, dataset_col="dataset",
              yscale="log", lumi=None, annotations=[], dataset_order=None,
              continue_errors=True, bin_variable_replacements={}, colourmap="nipy_spectral",
-             figsize=None, other_dtypes={}, **kwargs):
+             figsize=None, other_dset_types={}, **kwargs):
     figures = {}
 
     dimensions = utils.binning_vars(df)
@@ -54,7 +54,7 @@ def plot_all(df, project_1d=True, project_2d=True, data="data", signal=None, dat
                 plot = plot_1d_many(projected, data=data, signal=signal,
                                     dataset_col=dataset_col, scale_sims=lumi,
                                     colourmap=colourmap, dataset_order=dataset_order,
-                                    figsize=figsize, other_dtype_args=other_dtypes,
+                                    figsize=figsize, other_dset_type_args=other_dset_types,
                                     **kwargs)
                 figures[(("project", dim), ("yscale", yscale))] = plot
             except Exception as e:
@@ -109,7 +109,7 @@ class ColorDict():
 class FillColl(object):
     def __init__(self, n_colors=10, ax=None, fill=True, line=True, dataset_colours=None,
                  colourmap="nipy_spectral", dataset_order=None, linewidth=0.5, expected_xs=None, 
-                 other_dtypes=False, add_label_other=True, style_other=None, colour_other=None):
+                 other_dset_types=False, add_label_other=True, style_other=None, colour_other=None):
         self.calls = -1
         self.expected_xs = expected_xs
         self.colors = ColorDict(n_colors=n_colors, order=dataset_order,
@@ -119,7 +119,7 @@ class FillColl(object):
         self.fill = fill
         self.line = line
         self.linewidth = linewidth
-        self.other_dtypes = other_dtypes
+        self.other_dset_types = other_dset_types
         self.add_label_other = add_label_other
         self.style_other = style_other
         self.colour_other=colour_other
@@ -135,13 +135,13 @@ class FillColl(object):
 
     def __call__(self, col, **kwargs):
         ax, x, y, color = self.pre_call(col)
-        if self.fill and not self.other_dtypes:
+        if self.fill and not self.other_dset_types:
             draw(ax, "fill_between", x=x, ys=["y1"],
                  y1=y, label=col.name, expected_xs=self.expected_xs,
                  linewidth=0, color=color, **kwargs)
         if self.line:
             if self.fill:
-                if self.other_dtypes:
+                if self.other_dset_types:
                     style = self.style_other
                     label = col.name if self.add_label_other else None
                     color = color if type(color)==list else self.colour_other
@@ -175,7 +175,7 @@ class BarColl(FillColl):
 
 def actually_plot(df, x_axis, y, yerr, kind, label, ax, dataset_col="dataset",
                   dataset_colours=None, colourmap="nipy_spectral",
-                  dataset_order=None, other_dtype_args={}, dtype=None):
+                  dataset_order=None, other_dset_type_args={}, dset_type=None):
     expected_xs = df.index.unique(x_axis).values
     if kind == "scatter":
         draw(ax, "errorbar", x=df.reset_index()[x_axis], ys=["y", "yerr"], y=df[y], yerr=df[yerr],
@@ -204,30 +204,30 @@ def actually_plot(df, x_axis, y, yerr, kind, label, ax, dataset_col="dataset",
                           dataset_order=dataset_order,
                           line=False, expected_xs=expected_xs)
         vals.iloc[:, ::-1].apply(filler, axis=0, step="mid")
-    elif kind == "other_dtypes":
-        dtype_args = other_dtype_args[dtype]
-        dataset_colours =  dtype_args["colours"] if dtype_args["colours"] else dataset_colours
+    elif kind == "other_dset_types":
+        dset_type_args = other_dset_type_args[dset_type]
+        dataset_colours =  dset_type_args["colours"] if dset_type_args["colours"] else dataset_colours
         options = ["alpha", "style", "width", "add_label", "add_error", "regex"]
-        alpha, style, width, add_label, add_error, regex = [dtype_args[key] for key in options]
-        if "annotations" in dtype:
-            values = dtype_args['values'] if dtype_args['values'] else []
-            annotType = dtype_args["annotType"] if  dtype_args["annotType"] else "hlines"
-            z_order = dtype_args["z_order"]
+        alpha, style, width, add_label, add_error, regex = [dset_type_args[key] for key in options]
+        if "annotations" in dset_type:
+            values = dset_type_args['values'] if dset_type_args['values'] else []
+            annotType = dset_type_args["annotType"] if  dset_type_args["annotType"] else "hlines"
+            z_order = dset_type_args["z_order"]
             if annotType == "hlines": 
-                xmin, xmax = [dtype_args[key] for key in ['xmin', 'xmax']]
+                xmin, xmax = [dset_type_args[key] for key in ['xmin', 'xmax']]
                 xmax = len(expected_xs) if not xmax else xmax
                 plt.hlines(values, xmin, xmax, colors=dataset_colours,
                            alpha=alpha, ls=style, lw = width, zorder=z_order)
             if annotType == "vlines":
-                ymin = dtype_args['ymin']
-                ymax = dtype_args['ymax'] if dtype_args['ymax'] else 1
+                ymin = dset_type_args['ymin']
+                ymax = dset_type_args['ymax'] if dset_type_args['ymax'] else 1
                 for value in values:
                     plt.axvline(value, ymin, ymax, color=dataset_colours, alpha=alpha,
                                ls=style, lw = width, zorder=z_order)
         else:
             filler = FillColl(n_datasets, ax=ax, fill=True, colourmap=colourmap, dataset_colours=dataset_colours,
                               dataset_order=dataset_order, expected_xs=expected_xs, linewidth = width,
-                              other_dtypes=other_dtype_args, add_label_other=add_label, style_other=style,
+                              other_dset_types=other_dset_type_args, add_label_other=add_label, style_other=style,
                               colour_other=dataset_colours)
             vals.apply(filler, axis=0, step="mid")
         for dset in list(set(df.reset_index()[dataset_col])):
@@ -380,7 +380,7 @@ def plot_1d_many(df, prefix="", data="data", signal=None, dataset_col="dataset",
                  scale_sims=None, summary="ratio-error-both", colourmap="nipy_spectral",
                  dataset_order=None, figsize=(5, 6), show_over_underflow=False,
                  dataset_colours=None, err_from_sumw2=False, data_legend="Data",
-                 other_dtype_args={}, **kwargs):
+                 other_dset_type_args={}, **kwargs):
     y = "sumw"
     yvar = "sumw2"
     yerr = "err"
@@ -403,16 +403,16 @@ def plot_1d_many(df, prefix="", data="data", signal=None, dataset_col="dataset",
         in_df_signal = None
 
     config_extend = []
-    if other_dtype_args:
-        other_dtype_args=parse_dtype_args(other_dtype_args)
-        for dtype in other_dtype_args.keys():
-            dtype_labels=other_dtype_args[dtype]['regex']
-            if "annotations" not in dtype:
+    if other_dset_type_args:
+        other_dset_type_args=parse_dset_type_args(other_dset_type_args)
+        for dset_type in other_dset_type_args.keys():
+            dset_type_labels=other_dset_type_args[dset_type]['regex']
+            if "annotations" not in dset_type:
                 in_df_other, in_df_sims = utils.split_data_sims(
-                    in_df_sims, data_labels=dtype_labels, dataset_level=dataset_col)
+                    in_df_sims, data_labels=dset_type_labels, dataset_level=dataset_col)
             else:
                 in_df_other = df.copy()
-            config_extend.append((in_df_other, None, "other_dtypes", dtype_labels, "plot_other_dset", dtype))
+            config_extend.append((in_df_other, None, "other_dset_types", dset_type_labels, "plot_other_dset", dset_type))
     else:
         in_df_other = None
 
@@ -440,14 +440,14 @@ def plot_1d_many(df, prefix="", data="data", signal=None, dataset_col="dataset",
             "Too few dimensions to multiple 1D graphs, use plot_1d instead")
     x_axis = x_axis[0]
 
-    for df, combine, style, label, var_name, dtype in config:
+    for df, combine, style, label, var_name, dset_type in config:
         if (df is None or len(df) == 0):
             continue
         merged = _merge_datasets(df, combine, dataset_col, param_name=var_name, err_from_sumw2=err_from_sumw2)
         actually_plot(merged, x_axis=x_axis, y=y, yerr=yerr, kind=style, label=label,
                       ax=main_ax, dataset_col=dataset_col, dataset_colours=dataset_colours,
                       colourmap=colourmap, dataset_order=dataset_order,
-                      other_dtype_args=other_dtype_args, dtype=dtype)
+                      other_dset_type_args=other_dset_type_args, dset_type=dset_type)
     main_ax.set_xlabel(x_axis)
 
     if not summary:
@@ -558,31 +558,31 @@ def convert_intervals(vals):
         vals = vals.mid
     return vals
 
-def parse_dtype_args(other_dtype_args):
+def parse_dset_type_args(other_dset_type_args):
     """
-    Read potting config to parse specifications for new dtype to plot.
-    Default dtypes are also provided
+    Read potting config to parse specifications for new dset_type to plot.
+    Default dset_types are also provided
     """
  
-    default_dtypes={"default": {"style": "-", "alpha":0.2, "width":1, "colours":[],
+    default_dset_types={"default": {"style": "-", "alpha":0.2, "width":1, "colours":[],
                                 "add_label":True, "add_error": True}, 
                     "annotations": {"regex":"", "style": "-", "alpha":1, "width":1.5, 
                                     "colours":'k', "add_label":False, "add_error": False,
                                     "xmin":-1,"xmax":"", "ymin":0, "ymax":1, "z_order":10}}
-    for dtype in other_dtype_args.keys():
-        for def_dtype in default_dtypes.keys():
-            if def_dtype in dtype:
-                 default = def_dtype
+    for dset_type in other_dset_type_args.keys():
+        for def_dset_type in default_dset_types.keys():
+            if def_dset_type in dset_type:
+                 default = def_dset_type
                  break
         else:
             default = "default"
         default_specs = {key:val for key, val 
-                         in default_dtypes[default].items() 
-                         if key not in other_dtype_args[dtype].keys()}
-        other_dtype_args[dtype].update(default_specs)
-        if 'regex' not in other_dtype_args[dtype] and "annotations" not in dtype:
+                         in default_dset_types[default].items() 
+                         if key not in other_dset_type_args[dset_type].keys()}
+        other_dset_type_args[dset_type].update(default_specs)
+        if 'regex' not in other_dset_type_args[dset_type] and "annotations" not in dset_type:
             raise RuntimeError("Must specify a regex for other plotting datatype to be applied to")                                
-    return other_dtype_args
+    return other_dset_type_args
     
 
 def is_intervals(vals):
@@ -593,7 +593,7 @@ def is_intervals(vals):
     return False
 
 
-def draw(ax, method, x, ys, other_dtype_args={}, **kwargs):
+def draw(ax, method, x, ys, other_dset_type_args={}, **kwargs):
     fill_val = kwargs.pop("fill_val", 0)
     expected_xs = kwargs.pop("expected_xs", None)
     add_ends = kwargs.pop("add_ends", True)
