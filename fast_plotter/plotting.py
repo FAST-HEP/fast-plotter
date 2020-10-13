@@ -401,10 +401,9 @@ def plot_1d_many(df, prefix="", data="data", signal=None, dataset_col="dataset",
             error = "markers"
         else:
             raise RuntimeError(err_msg)
-        if 'ratio_ylim' not in kwargs.keys():
-            kwargs['ratio_ylim'] = [0., 2.]
+        kwargs.setdefault("ratio_ylim", [0., 2.])
         plot_ratio(summed_data, summed_sims, x=x_axis,
-                   y=y, yerr=yerr, ax=summary_ax, error=error, ylim=kwargs['ratio_ylim'])
+                   y=y, yerr=yerr, ax=summary_ax, error=error, ylim=kwargs["ratio_ylim"])
     else:
         raise RuntimeError(err_msg)
     return main_ax, summary_ax
