@@ -393,6 +393,9 @@ def plot_1d_many(df, prefix="", data="data", signal=None, dataset_col="dataset",
         main_ax.set_xlabel("")
         summed_data = _merge_datasets(
             in_df_data, "sum", dataset_col=dataset_col, err_from_sumw2=err_from_sumw2)
+        kwargs.setdefault("signal_in_ratio", False)
+        if kwargs["signal_in_ratio"]:
+            in_df_sims = pd.concat([in_df_sims, in_df_signal])
         summed_sims = _merge_datasets(
             in_df_sims, "sum", dataset_col=dataset_col, err_from_sumw2=err_from_sumw2)
         if summary == "ratio-error-both":
