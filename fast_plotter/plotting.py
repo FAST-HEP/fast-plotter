@@ -402,8 +402,10 @@ def plot_1d_many(df, prefix="", data="data", signal=None, dataset_col="dataset",
         else:
             raise RuntimeError(err_msg)
         kwargs.setdefault("ratio_ylim", [0., 2.])
+        kwargs.setdefault("ratio_ylabel", "Data / MC")
         plot_ratio(summed_data, summed_sims, x=x_axis,
-                   y=y, yerr=yerr, ax=summary_ax, error=error, ylim=kwargs["ratio_ylim"])
+                   y=y, yerr=yerr, ax=summary_ax, error=error,
+                   ylim=kwargs["ratio_ylim"], ylabel=kwargs["ratio_ylabel"])
     else:
         raise RuntimeError(err_msg)
     return main_ax, summary_ax
@@ -439,7 +441,7 @@ def plot_1d(df, kind="line", yscale="lin"):
     return fig
 
 
-def plot_ratio(data, sims, x, y, yerr, ax, error="both", ylim=[0., 2]):
+def plot_ratio(data, sims, x, y, yerr, ax, error="both", ylim=[0., 2], ylabel="Data / MC"):
     # make sure both sides agree with the binning
     merged = data.join(sims, how="left", lsuffix="data", rsuffix="sims")
     data = merged.filter(like="data", axis="columns").fillna(0)
@@ -478,7 +480,7 @@ def plot_ratio(data, sims, x, y, yerr, ax, error="both", ylim=[0., 2]):
     ax.grid(True)
     ax.set_axisbelow(True)
     ax.set_xlabel(x)
-    ax.set_ylabel("Data / MC")
+    ax.set_ylabel(ylabel)
 
 
 def convert_intervals(vals):
