@@ -140,7 +140,7 @@ class FillColl(object):
                 width = self.linewidth
                 style = "-"
             else:
-                color = None
+                color = color
                 label = col.name
                 width = 2
                 style = "--"
