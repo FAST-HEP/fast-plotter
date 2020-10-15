@@ -108,7 +108,7 @@ class ColorDict():
 
 class FillColl(object):
     def __init__(self, n_colors=10, ax=None, fill=True, line=True, dataset_colours=None,
-                 colourmap="nipy_spectral", dataset_order=None, linewidth=0.5, expected_xs=None, 
+                 colourmap="nipy_spectral", dataset_order=None, linewidth=0.5, expected_xs=None,
                  other_dset_types=False, add_label_other=True, style_other=None, colour_other=None):
         self.calls = -1
         self.expected_xs = expected_xs
@@ -122,7 +122,7 @@ class FillColl(object):
         self.other_dset_types = other_dset_types
         self.add_label_other = add_label_other
         self.style_other = style_other
-        self.colour_other=colour_other
+        self.colour_other = colour_other
 
     def pre_call(self, column):
         ax = self.ax
@@ -144,7 +144,7 @@ class FillColl(object):
                 if self.other_dset_types:
                     style = self.style_other
                     label = col.name if self.add_label_other else None
-                    color = color if type(color)==list else self.colour_other
+                    color = color if type(color) == list else self.colour_other
                     width = self.linewidth
                 else:
                     style = "-"
@@ -205,19 +205,20 @@ def actually_plot(df, x_axis, y, yerr, kind, label, ax, dataset_col="dataset",
                           line=False, expected_xs=expected_xs)
         vals.iloc[:, ::-1].apply(filler, axis=0, step="mid")
     elif kind == "other_dset_types":
-        other_defaults={"style": "-", "alpha":0.2, "width":1, "colours":[], "add_label":True, "add_error": True}
-        default_specs = {key:val for key, val
+        other_defaults = {"style": "-", "alpha": 0.2, "width": 1,
+                          "colours": [], "add_label": True, "add_error": True}
+        default_specs = {key: val for key, val
                          in other_defaults.items()
                          if key not in other_dset_type_args[dset_type].keys()}
         other_dset_type_args[dset_type].update(default_specs)
         if 'regex' not in other_dset_type_args[dset_type]:
             raise RuntimeError("Must specify a regex for other plotting datatype to be applied to")
         dset_type_args = other_dset_type_args[dset_type]
-        dataset_colours =  dset_type_args["colours"] if dset_type_args["colours"] else dataset_colours
+        dataset_colours = dset_type_args["colours"] if dset_type_args["colours"] else dataset_colours
         options = ["alpha", "style", "width", "add_label", "add_error", "regex"]
         alpha, style, width, add_label, add_error, regex = [dset_type_args[key] for key in options]
         filler = FillColl(n_datasets, ax=ax, fill=True, colourmap=colourmap, dataset_colours=dataset_colours,
-                          dataset_order=dataset_order, expected_xs=expected_xs, linewidth = width,
+                          dataset_order=dataset_order, expected_xs=expected_xs, linewidth=width,
                           other_dset_types=other_dset_type_args, add_label_other=add_label, style_other=style,
                           colour_other=dataset_colours)
         vals.apply(filler, axis=0, step="mid")
@@ -225,11 +226,11 @@ def actually_plot(df, x_axis, y, yerr, kind, label, ax, dataset_col="dataset",
             if not re.compile(regex).match(dset):
                 continue
             if add_error:
-               color = dataset_colours[dset] if dset in dataset_colours else dataset_colours
-               dset_df = df.reset_index().loc[df.reset_index()[dataset_col]==dset].reset_index()
-               x = dset_df[x_axis]
-               draw(ax, "fill_between", x, ys=["y1", "y2"], y1=dset_df.eval("sumw+sqrt(sumw2)"), 
-                    y2=dset_df.eval("sumw-sqrt(sumw2)"), color=color, alpha=alpha, expected_xs=expected_xs)
+                color = dataset_colours[dset] if dset in dataset_colours else dataset_colours
+                dset_df = df.reset_index().loc[df.reset_index()[dataset_col] == dset].reset_index()
+                x = dset_df[x_axis]
+                draw(ax, "fill_between", x, ys=["y1", "y2"], y1=dset_df.eval("sumw+sqrt(sumw2)"),
+                     y2=dset_df.eval("sumw-sqrt(sumw2)"), color=color, alpha=alpha, expected_xs=expected_xs)
 
     elif kind == "fill-error-last":
         actually_plot(df, x_axis, y, yerr, "fill", label, ax, dataset_colours=dataset_colours,
@@ -398,10 +399,11 @@ def plot_1d_many(df, prefix="", data="data", signal=None, dataset_col="dataset",
     config_extend = []
     if other_dset_type_args:
         for dset_type in other_dset_type_args.keys():
-            dset_type_labels=other_dset_type_args[dset_type]['regex']
+            dset_type_labels = other_dset_type_args[dset_type]['regex']
             in_df_other, in_df_sims = utils.split_data_sims(
                  in_df_sims, data_labels=dset_type_labels, dataset_level=dataset_col)
-            config_extend.append((in_df_other, None, "other_dset_types", dset_type_labels, "plot_other_dset", dset_type))
+            config_extend.append((in_df_other, None, "other_dset_types",
+                                  dset_type_labels, "plot_other_dset", dset_type))
     else:
         in_df_other = None
 
@@ -412,7 +414,7 @@ def plot_1d_many(df, prefix="", data="data", signal=None, dataset_col="dataset",
 
     config.extend(config_extend)
 
-    if in_df_data is None or in_df_sims is None: # or in_df_other is not None:
+    if in_df_data is None or in_df_sims is None:
         summary = None
     if not summary:
         fig, main_ax = plt.subplots(1, 1, figsize=figsize)
@@ -479,29 +481,30 @@ def _merge_datasets(df, style, dataset_col, param_name="_merge_datasets", err_fr
 
 
 def annotate_lines(cfg, main_ax, summary_ax):
-    linetype=list(cfg.keys())[0]
-    annotDict=cfg[linetype]
-    if not 'values' in annotDict.keys():
+    linetype = list(cfg.keys())[0]
+    annotDict = cfg[linetype]
+    if 'values' not in annotDict.keys():
         raise(RuntimeError("Must provide values for line placement."))
-    annotDefaults = {"style": "-", "alpha":1, "width":1.5,
-                     "colour":'k', "label":None, "vmin": 0,  
-                     "vmax": 1, "zorder":10, "axes": ["main"]}
-    annotDict.update({key:value for key, value in annotDefaults.items()
-                                if key not in annotDict.keys()})
-    lineKeys=['values', 'style','alpha','width','colour','label','vmin','vmax', 'zorder', 'axes']
-    values,style,alpha,width,colour,label,vmin,vmax,zorder,axes = [annotDict[key] for key in lineKeys]
+    annotDefaults = {"style": "-", "alpha": 1, "width": 1.5,
+                     "colour": 'k', "label": None, "vmin": 0,
+                     "vmax": 1, "zorder": 10, "axes": ["main"]}
+    annotDict.update({key: value for key, value in annotDefaults.items()
+                      if key not in annotDict.keys()})
+    lineKeys = ['values', 'style', 'alpha', 'width', 'colour', 'label', 'vmin', 'vmax', 'zorder', 'axes']
+    values, style, alpha, width, colour, label, vmin, vmax, zorder, axes = [annotDict[key] for key in lineKeys]
     for axis in axes:
-        awidth = 0.6*width if (axis=='summary') else width
-        ax = main_ax if (str(axis)=='main') else summary_ax if (str(axis)=='summary') else None
-        if ax==None:
-             raise(RuntimeError("Axis must exist and either be 'main' or 'summary'. {} is None".format(axis)))
+        awidth = 0.6 * width if (axis == 'summary') else width
+        ax = main_ax if (str(axis) == 'main') else summary_ax if (str(axis) == 'summary') else None
+        if ax is None:
+            raise(RuntimeError("Axis must exist and either be 'main' or 'summary'. {} is None".format(axis)))
         for value in values:
-            if linetype=='hlines':
+            if linetype == 'hlines':
                 ax.axhline(value, vmin, vmax, color=colour, label=label,
-                  alpha=alpha, ls=style, lw = awidth, zorder=zorder)
-            if linetype=='vlines':
+                           alpha=alpha, ls=style, lw=awidth, zorder=zorder)
+            if linetype == 'vlines':
                 ax.axvline(value, vmin, vmax, color=colour, label=label,
-                  alpha=alpha, ls=style, lw = awidth, zorder=zorder)
+                           alpha=alpha, ls=style, lw=awidth, zorder=zorder)
+
 
 def add_annotations(annotations, ax, summary_ax, expected_xs=None):
     for cfg in annotations:
@@ -513,6 +516,7 @@ def add_annotations(annotations, ax, summary_ax, expected_xs=None):
         xy = cfg.pop("position")
         cfg.setdefault("xycoords", "axes fraction")
         ax.annotate(s, xy=xy, **cfg)
+
 
 def plot_1d(df, kind="line", yscale="lin"):
     fig, ax = plt.subplots(1)
@@ -572,6 +576,7 @@ def convert_intervals(vals):
     elif isinstance(vals, (pd.arrays.IntervalArray, pd.IntervalIndex)):
         vals = vals.mid
     return vals
+
 
 def is_intervals(vals):
     if isinstance(vals, pd.Series) and isinstance(vals[0], pd.Interval):
