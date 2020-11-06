@@ -29,7 +29,7 @@ class BinningDimCombiner():
 
 
 def handle_one_df(df, query=None, replacements=[],
-                  combine_dims=[], combine_dims_ignore=None, combine_delim="__", engine_query="numexpr"):
+                  combine_dims=[], combine_dims_ignore=None, combine_delim="__", engine_query=None):
     if query:
         df.query(query, inplace=True, engine=engine_query)
     if df.empty:
@@ -51,7 +51,7 @@ def handle_one_df(df, query=None, replacements=[],
     return df
 
 
-def query(df, query, engine_query="numexpr"):
+def query(df, query, engine_query=None):
     """
     Keep only rows that satisfy requirements of the query string,
     See: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.query.html
