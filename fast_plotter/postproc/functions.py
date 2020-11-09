@@ -29,9 +29,9 @@ class BinningDimCombiner():
 
 
 def handle_one_df(df, query=None, replacements=[],
-                  combine_dims=[], combine_dims_ignore=None, combine_delim="__"):
+                  combine_dims=[], combine_dims_ignore=None, combine_delim="__", engine_query=None):
     if query:
-        df.query(query, inplace=True)
+        df.query(query, inplace=True, engine=engine_query)
     if df.empty:
         return
     df.drop(df.filter(like="Unnamed").columns, axis=1, inplace=True)
@@ -51,13 +51,13 @@ def handle_one_df(df, query=None, replacements=[],
     return df
 
 
-def query(df, query):
+def query(df, query, engine=None):
     """
     Keep only rows that satisfy requirements of the query string,
     See: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.query.html
     """
     logger.info("Applying query: %s", query)
-    return handle_one_df(df, query=query)
+    return handle_one_df(df, query=query, engine_query=engine)
 
 
 def rebin(df, axis, mapping, ignore_when_combining=None, rename=None, drop_others=False):
