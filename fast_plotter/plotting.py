@@ -381,8 +381,6 @@ def plot_1d_many(df, prefix="", data="data", signal=None, dataset_col="dataset",
         yvar = prefix + ":" + yvar
         yerr = prefix + ":" + yerr
 
-    fig, ax = plt.subplots(1, 1)
-
     if not show_over_underflow:
         df = utils.drop_over_underflow(df)
     in_df_data, in_df_sims = utils.split_data_sims(
