@@ -6,6 +6,8 @@ import six
 import logging
 import matplotlib
 matplotlib.use('Agg')
+matplotlib.rcParams.update({'figure.autolayout': True})
+from .version import __version__ # noqa
 from .utils import read_binned_df, weighting_vars # noqa
 from .utils import decipher_filename, mask_rows  # noqa
 from .plotting import plot_all, add_annotations # noqa
@@ -42,6 +44,7 @@ def arg_parser(args=None):
                         help="Scale the MC yields by this lumi")
     parser.add_argument("-y", "--yscale", default="log", choices=["log", "linear"],
                         help="Use this scale for the y-axis")
+    parser.add_argument('--version', action='version', version='%(prog)s ' + __version__)
 
     def split_equals(arg):
         return arg.split("=")
@@ -68,7 +71,9 @@ def main(args=None):
     return 0 if ran_ok else 1
 
 
-def process_cfg(cfg_file, args):
+def process_cfg(cfg_file, args, make_arg_parser=None):
+    if not make_arg_parser:
+        make_arg_parser = arg_parser
     import yaml
     from argparse import Namespace
     from string import Template
@@ -76,7 +81,7 @@ def process_cfg(cfg_file, args):
         cfg = yaml.safe_load(infile)
     # Only way to neatly allow cmd-line args to override config and handle
     # defaults seems to be:
-    parser = arg_parser()
+    parser = make_arg_parser()
     parser.set_defaults(**cfg)
     args = parser.parse_args()
     if args.variables:
@@ -104,12 +109,11 @@ def process_one_file(infile, args):
     for weight in weights:
         if args.weights and weight not in args.weights:
             continue
+        df_filtered = df.copy()
         if weight == "n":
-            df_filtered = df.filter(weight, axis="columns").copy()
-            df_filtered.rename({weight: "sumw"}, axis="columns", inplace=True)
-            df_filtered["sumw2"] = df_filtered.sumw
+            df_filtered["sumw"] = df_filtered.n
+            df_filtered["sumw2"] = df_filtered.n
         else:
-            df_filtered = df.copy()
             if "n" in df.columns:
                 data_rows = mask_rows(df_filtered,
                                       regex=args.data,
@@ -133,8 +137,9 @@ def process_one_file(infile, args):
     return ran_ok
 
 
-def dress_main_plots(plots, annotations=[], yscale=None, ylabel=None, legend={}, limits={}, **kwargs):
-    for main_ax, _ in plots.values():
+def dress_main_plots(plots, annotations=[], yscale=None, ylabel=None, legend={},
+                     limits={}, xtickrotation=None, **kwargs):
+    for main_ax, summary_ax in plots.values():
         add_annotations(annotations, main_ax)
         if yscale:
             main_ax.set_yscale(yscale)
@@ -150,6 +155,8 @@ def dress_main_plots(plots, annotations=[], yscale=None, ylabel=None, legend={},
                     getattr(main_ax, "set_%slim" % axis)(*lims)
             elif lims.endswith("%"):
                 main_ax.margins(**{axis: float(lims[:-1])})
+        if xtickrotation:
+            matplotlib.pyplot.xticks(rotation=xtickrotation)
 
 
 def save_plots(infile, weight, plots, outdir, extensions):
@@ -172,5 +179,4 @@ def save_plots(infile, weight, plots, outdir, extensions):
 
 
 if __name__ == "__main__":
-    args = arg_parser().parse_args()
-    main(args)
+    main()

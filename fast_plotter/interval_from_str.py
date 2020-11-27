@@ -40,7 +40,9 @@ def interval_from_string(series):
     return interval
 
 
-def convert_intervals(df, to="mid", level=[], column=[]):
+def convert_intervals(df, to="mid", level=[], column=[], inplace=True):
+    if not inplace:
+        df = df.copy()
     df = convert_intervals_level(df, to=to, select=level)
     df = convert_intervals_column(df, to=to, select=column)
     return df

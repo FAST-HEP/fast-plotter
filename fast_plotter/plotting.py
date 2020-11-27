@@ -123,7 +123,7 @@ class FillColl(object):
         if not ax:
             ax = plt.gca()
         color = self.colors.get_colour(index=self.calls, name=column.name)
-        x = column.index.values
+        x = column.index
         y = column.values
         return ax, x, y, color
 
@@ -145,7 +145,7 @@ class FillColl(object):
                 width = 2
                 style = "--"
             draw(ax, "step", x=x, ys=["y"], y=y, expected_xs=self.expected_xs,
-                 color=color, linewidth=width, where="mid", label=label, linestyle=style)
+                 color=color, linewidth=width, label=label, linestyle=style)
         self.calls += 1
 
 
@@ -201,7 +201,7 @@ def actually_plot(df, x_axis, y, yerr, kind, label, ax, dataset_col="dataset",
         y_down = (summed[y] - summed[yerr]).values
         y_up = (summed[y] + summed[yerr]).values
         draw(ax, "fill_between", x, ys=["y1", "y2"], y2=y_down, y1=y_up,
-             color="gray", step="mid", alpha=0.7, expected_xs=expected_xs)
+             color="gray", alpha=0.7, expected_xs=expected_xs)
     else:
         raise RuntimeError("Unknown value for 'kind', '{}'".format(kind))
 
@@ -217,12 +217,56 @@ def standardize_values(x, y_values=[], fill_val=0, expected_xs=None, add_ends=Tr
     if expected_xs is not None:
         x, y_values = add_missing_vals(x, expected_xs, y_values=y_values, fill_val=fill_val)
 
+    ticks = None
+    if x.dtype.kind not in 'biufc' and not isinstance(x[0], pd.Interval):
+        x, ticks = np.arange(len(x)), x
+        fill_val = [fill_val] * len(y_values) + [""]
+        y_values.append(ticks)
+
+    if isinstance(x[0], pd.Interval):
+        if isinstance(x, pd.arrays.IntervalArray) and not x.is_non_overlapping_monotonic:
+            return (x,) + tuple(y_values)
+
+        x, y_values = intervals_to_breaks(x, y_values, fill_val)
+
     if x.dtype.kind in 'bifc':
+        if not isinstance(x, np.ndarray):
+            x = x.values
+
         x = replace_infs(x)
 
         if add_ends:
             x, y_values = pad_ends(x, y_values=y_values, fill_val=fill_val)
-    return (x,) + tuple(y_values)
+
+    if ticks is not None:
+        ticks = y_values[-1]
+        y_values = y_values[:-1]
+
+    return (x, ticks) + tuple(y_values)
+
+
+def intervals_to_breaks(x, y_values, fill_val=None):
+    """
+    Convert a list of intervals into a list of breaks, where overlapping
+    interval edges are removed
+    """
+    left = x.left
+    right = x.right
+
+    mid_breaks = np.vstack((left[1:], right[:-1]))
+    nonmatches = left[1:] != right[:-1]
+    selected = np.vstack((np.ones_like(nonmatches), nonmatches))
+    mid_breaks = mid_breaks[selected]
+
+    breaks = np.concatenate([left[:1], mid_breaks, right[-1:]])
+
+    new_ys = []
+    for y in y_values:
+        newy = np.vstack([y[1:], np.full_like(y[1:], fill_val)])
+        newy = np.concatenate([y[:1], newy[selected], [fill_val]])
+        new_ys.append(newy)
+
+    return breaks, new_ys
 
 
 def replace_infs(x):
@@ -271,8 +315,13 @@ def pad_ends(x, y_values=[], fill_val=0):
     if len(x) > 1:
         mean_width = np.diff(x).mean()
 
+    if isinstance(fill_val, (tuple, list)):
+        assert len(y_values) == len(fill_val), "fill_val must be a scalar, or an iterable with length equal to y_values"
+    else:
+        fill_val = [fill_val] * len(y_values)
+
     x = np.concatenate((x[0:1] - mean_width, x, x[-1:] + mean_width), axis=0)
-    new_values = [np.concatenate(([fill_val], y, [fill_val]), axis=0) for y in y_values]
+    new_values = [np.concatenate(([f], y, [f]), axis=0) for y, f in zip(y_values, fill_val)]
     return x, tuple(new_values)
 
 
@@ -281,7 +330,7 @@ def plot_1d_many(df, prefix="", data="data", signal=None, dataset_col="dataset",
                  kind_data="scatter", kind_sims="fill-error-last", kind_signal="line",
                  scale_sims=None, summary="ratio-error-both", colourmap="nipy_spectral",
                  dataset_order=None, figsize=(5, 6), show_over_underflow=False,
-                 dataset_colours=None, err_from_sumw2=False, **kwargs):
+                 dataset_colours=None, err_from_sumw2=False, data_legend="Data", **kwargs):
     y = "sumw"
     yvar = "sumw2"
     yerr = "err"
@@ -290,7 +339,6 @@ def plot_1d_many(df, prefix="", data="data", signal=None, dataset_col="dataset",
         yvar = prefix + ":" + yvar
         yerr = prefix + ":" + yerr
 
-    df = utils.convert_intervals(df, to="mid")
     if not show_over_underflow:
         df = utils.drop_over_underflow(df)
     in_df_data, in_df_sims = utils.split_data_sims(
@@ -323,7 +371,7 @@ def plot_1d_many(df, prefix="", data="data", signal=None, dataset_col="dataset",
     x_axis = x_axis[0]
 
     config = [(in_df_sims, plot_sims, kind_sims, "Monte Carlo", "plot_sims"),
-              (in_df_data, plot_data, kind_data, "Data", "plot_data"),
+              (in_df_data, plot_data, kind_data, data_legend, "plot_data"),
               (in_df_signal, plot_signal, kind_signal, "Signal", "plot_signal"),
               ]
     for df, combine, style, label, var_name in config:
@@ -353,10 +401,11 @@ def plot_1d_many(df, prefix="", data="data", signal=None, dataset_col="dataset",
             error = "markers"
         else:
             raise RuntimeError(err_msg)
-        if 'ratio_ylim' not in kwargs.keys():
-            kwargs['ratio_ylim'] = [0., 2.]
+        kwargs.setdefault("ratio_ylim", [0., 2.])
+        kwargs.setdefault("ratio_ylabel", "Data / MC")
         plot_ratio(summed_data, summed_sims, x=x_axis,
-                   y=y, yerr=yerr, ax=summary_ax, error=error, ylim=kwargs['ratio_ylim'])
+                   y=y, yerr=yerr, ax=summary_ax, error=error,
+                   ylim=kwargs["ratio_ylim"], ylabel=kwargs["ratio_ylabel"])
     else:
         raise RuntimeError(err_msg)
     return main_ax, summary_ax
@@ -364,14 +413,13 @@ def plot_1d_many(df, prefix="", data="data", signal=None, dataset_col="dataset",
 
 def _merge_datasets(df, style, dataset_col, param_name="_merge_datasets", err_from_sumw2=False):
     if style == "stack":
-        utils.calculate_error(df, do_rel_err=not err_from_sumw2)
         df = utils.stack_datasets(df, dataset_level=dataset_col)
     elif style == "sum":
         df = utils.sum_over_datasets(df, dataset_level=dataset_col)
-        utils.calculate_error(df, do_rel_err=not err_from_sumw2)
     elif style:
         msg = "'{}' must be either 'sum', 'stack' or None. Got {}"
         raise RuntimeError(msg.format(param_name, style))
+    utils.calculate_error(df, do_rel_err=not err_from_sumw2)
     return df
 
 
@@ -393,7 +441,7 @@ def plot_1d(df, kind="line", yscale="lin"):
     return fig
 
 
-def plot_ratio(data, sims, x, y, yerr, ax, error="both", ylim=[0., 2]):
+def plot_ratio(data, sims, x, y, yerr, ax, error="both", ylim=[0., 2], ylabel="Data / MC"):
     # make sure both sides agree with the binning
     merged = data.join(sims, how="left", lsuffix="data", rsuffix="sims")
     data = merged.filter(like="data", axis="columns").fillna(0)
@@ -403,50 +451,76 @@ def plot_ratio(data, sims, x, y, yerr, ax, error="both", ylim=[0., 2]):
 
     s, s_err = sims[y], sims[yerr]
     d, d_err = data[y], data[yerr]
-    x_axis = data.reset_index()[x]
+    x_axis = data.index.get_level_values(x)
 
     if error == "markers":
         central, lower, upper = stats.try_root_ratio_plot(d, d_err, s, s_err)
-        x_axis, central, lower, upper = standardize_values(x_axis, y_values=(central, lower, upper), add_ends=False)
+        values = standardize_values(x_axis, y_values=(central, lower, upper), add_ends=False)
+        x_axis, ticks, central, lower, upper = values
         mask = (central != 0) & (lower != 0)
         ax.errorbar(x=x_axis[mask], y=central[mask], yerr=(lower[mask], upper[mask]),
                     fmt="o", markersize=4, color="k")
+        draw(ax, "errorbar", x_axis[mask], ys=["y", "yerr"],
+             y=central[mask], yerr=(lower[mask], upper[mask]),
+             fmt="o", markersize=4, color="k")
 
     elif error == "both":
         ratio = d / s
         rel_d_err = (d_err / s)
         rel_s_err = (s_err / s)
 
-        vals = standardize_values(x_axis.values, y_values=[ratio, rel_s_err, rel_d_err], add_ends=False)
-        x_axis, ratio, rel_s_err, rel_d_err = vals
-
-        ax.errorbar(x=x_axis, y=ratio, yerr=rel_d_err, fmt="o", markersize=4, color="k")
+        draw(ax, "errorbar", x_axis, ys=["y", "yerr"],
+             y=ratio, yerr=rel_d_err,
+             fmt="o", markersize=4, color="k")
         draw(ax, "fill_between", x_axis, ys=["y1", "y2"],
              y2=1 + rel_s_err, y1=1 - rel_s_err, fill_val=1,
-             color="gray", step="mid", alpha=0.7)
+             color="gray", alpha=0.7)
 
     ax.set_ylim(ylim)
     ax.grid(True)
     ax.set_axisbelow(True)
     ax.set_xlabel(x)
-    ax.set_ylabel("Data / MC")
+    ax.set_ylabel(ylabel)
+
+
+def convert_intervals(vals):
+    if vals is None:
+        return vals
+    if isinstance(vals, pd.Series) and isinstance(vals[0], pd.Interval):
+        vals = vals.apply(lambda i: i.mid).values
+    elif isinstance(vals, (pd.arrays.IntervalArray, pd.IntervalIndex)):
+        vals = vals.mid
+    return vals
+
+
+def is_intervals(vals):
+    if isinstance(vals, pd.Series) and isinstance(vals[0], pd.Interval):
+        return True
+    elif isinstance(vals, (pd.arrays.IntervalArray, pd.IntervalIndex)):
+        return True
+    return False
 
 
 def draw(ax, method, x, ys, **kwargs):
     fill_val = kwargs.pop("fill_val", 0)
     expected_xs = kwargs.pop("expected_xs", None)
     add_ends = kwargs.pop("add_ends", True)
-    if x.dtype.kind in 'biufc':
-        values = standardize_values(x, [kwargs[y] for y in ys],
-                                    fill_val=fill_val,
-                                    add_ends=add_ends,
-                                    expected_xs=expected_xs)
-        x = values[0]
-        new_ys = values[1:]
-        kwargs.update(dict(zip(ys, new_ys)))
-        ticks = None
+    if method == "fill_between":
+        kwargs["step"] = "post" if is_intervals(x) else "mid"
+    elif method == "step":
+        kwargs["where"] = "post" if is_intervals(x) else "mid"
     else:
-        x, ticks = np.arange(len(x)), x
+        x = convert_intervals(x)
+        expected_xs = convert_intervals(expected_xs)
+
+    values = standardize_values(x, [kwargs[y] for y in ys],
+                                fill_val=fill_val,
+                                add_ends=add_ends,
+                                expected_xs=expected_xs)
+    x = values[0]
+    ticks = values[1]
+    new_ys = values[2:]
+    kwargs.update(dict(zip(ys, new_ys)))
     getattr(ax, method)(x=x, **kwargs)
     if ticks is not None:
         ax.set_xticks(x)

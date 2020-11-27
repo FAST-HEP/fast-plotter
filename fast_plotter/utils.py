@@ -100,7 +100,7 @@ def calculate_error(df, sumw2_label="sumw2", err_label="err", inplace=True, do_r
         if do_rel_err and column.endswith("sumw"):
             err_name = column.replace("sumw", err_label)
             errs = np.true_divide(df[column], root_n)
-            errs[~np.isfinite(errs)] = np.nan
+            errs.loc[~np.isfinite(errs)] = np.nan
             df[err_name] = errs
         elif not do_rel_err and sumw2_label in column:
             err_name = column.replace(sumw2_label, err_label)
@@ -171,7 +171,8 @@ def rename_index(df, name_replacements):
 
 
 def drop_over_underflow(df):
-    index = df.index.to_frame()
+    index = convert_intervals(df, to="mid", inplace=False).index.to_frame()
     index = index.select_dtypes(exclude=['object'])
     good_rows = np.isfinite(index).all(axis=1)
-    return df.loc[good_rows]
+    out = df.iloc[good_rows.values]
+    return out
