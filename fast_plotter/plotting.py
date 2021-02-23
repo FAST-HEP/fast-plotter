@@ -55,7 +55,7 @@ def plot_all(df, project_1d=True, project_2d=True, data="data", signal=None, dat
                                     dataset_col=dataset_col, scale_sims=lumi,
                                     colourmap=colourmap, dataset_order=dataset_order,
                                     figsize=figsize, other_dset_type_args=other_dset_types,
-                                    **kwargs)
+                                    dim=dim, **kwargs)
                 figures[(("project", dim), ("yscale", yscale))] = plot
             except Exception as e:
                 if not continue_errors:
@@ -372,7 +372,7 @@ def plot_1d_many(df, prefix="", data="data", signal=None, dataset_col="dataset",
                  scale_sims=None, summary="ratio-error-both", colourmap="nipy_spectral",
                  dataset_order=None, figsize=(5, 6), show_over_underflow=False,
                  dataset_colours=None, err_from_sumw2=False, data_legend="Data",
-                 other_dset_type_args={}, **kwargs):
+                 other_dset_type_args={}, dim=None, **kwargs):
     y = "sumw"
     yvar = "sumw2"
     yerr = "err"
@@ -380,6 +380,8 @@ def plot_1d_many(df, prefix="", data="data", signal=None, dataset_col="dataset",
         y = prefix + ":" + y
         yvar = prefix + ":" + yvar
         yerr = prefix + ":" + yerr
+
+    fig, ax = plt.subplots(1, 1)
 
     if not show_over_underflow:
         df = utils.drop_over_underflow(df)
@@ -415,10 +417,10 @@ def plot_1d_many(df, prefix="", data="data", signal=None, dataset_col="dataset",
     if in_df_data is None or in_df_sims is None:
         summary = None
     if not summary:
-        fig, main_ax = plt.subplots(1, 1, figsize=figsize)
+        fig, main_ax = plt.subplots(1, 1, figsize=[float(i) for i in figsize])
     else:
         fig, ax = plt.subplots(
-            2, 1, gridspec_kw={"height_ratios": (3, 1)}, sharex=True, figsize=figsize)
+            2, 1, gridspec_kw={"height_ratios": (3, 1)}, sharex=True, figsize=[float(i) for i in figsize])
         fig.subplots_adjust(hspace=.1)
         main_ax, summary_ax = ax
     x_axis = [col for col in df.index.names if col != dataset_col]
@@ -496,6 +498,7 @@ def annotate_lines(cfg, main_ax, summary_ax):
         if ax is None:
             raise(RuntimeError("Axis must exist and either be 'main' or 'summary'. {} is None".format(axis)))
         for value in values:
+            value = float(value)
             if linetype == 'hlines':
                 ax.axhline(value, vmin, vmax, color=colour, label=label,
                            alpha=alpha, ls=style, lw=awidth, zorder=zorder)
@@ -504,7 +507,7 @@ def annotate_lines(cfg, main_ax, summary_ax):
                            alpha=alpha, ls=style, lw=awidth, zorder=zorder)
 
 
-def add_annotations(annotations, ax, summary_ax, expected_xs=None):
+def add_annotations(annotations, ax, summary_ax=None, expected_xs=None):
     for cfg in annotations:
         if 'hlines' in cfg.keys() or 'vlines' in cfg.keys():
             annotate_lines(cfg, ax, summary_ax)
