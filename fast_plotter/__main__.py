@@ -148,6 +148,7 @@ def autoscale_values(args, df_filtered, weight, data_rows, mc_rows, ylim_lower=0
      
 
 def process_one_file(infile, args):
+    logger.info("Processing: " + infile)
     df = read_binned_df(infile, dtype={args.dataset_col: str})
     weights = weighting_vars(df)
     autoscale = hasattr(args, "autoscale")
@@ -216,9 +217,9 @@ def dress_main_plots(plots, annotations=[], yscale=None, ylabel=None, legend={},
                 lims = map(float, lims)
                 getattr(main_ax, "set_%slim" % axis)(*lims)
             elif lims.endswith("%"):
-                 main_ax.margins(**{axis: float(lims[:-1])})
+                main_ax.margins(**{axis: float(lims[:-1])})
         if xtickrotation:
-            matplotlib.pyplot.xticks(rotation=90)
+            matplotlib.pyplot.xticks(rotation=xtickrotation)
 
 
 def save_plots(infile, weight, plots, outdir, extensions):
