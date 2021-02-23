@@ -35,12 +35,11 @@ def read_binned_df(filename, **kwargs):
     columns = df.index.names[:]
     df.reset_index(inplace=True)
     dtype = kwargs.pop("dtype", [])
-    for col in df.columns:      
+    for col in df.columns:
         if col in dtype:
             continue
         df[col] = interval_from_string(df[col])
     df.set_index(columns, inplace=True)
-    
     return df
 
 
