@@ -110,7 +110,7 @@ def autoscale_values(args, df_filtered, weight, data_rows, mc_rows, ylim_lower=0
                     max_y = df_filtered['sumw'].max()
                 else:
                     max_mc = df_filtered.loc[mc_rows, 'sumw'].max()*args.lumi
-                    max_data = df_filtered.loc[data_rows, 'n'].max()
+                    max_data = df_filtered.loc[data_rows, 'n'].max() if 'n' in df_filtered.columns else 0.1
                     max_y = max(max_mc, max_data)
                 max_y = max_y if max_y >= 1 else 1
                 if args.yscale=='log': 
@@ -118,7 +118,8 @@ def autoscale_values(args, df_filtered, weight, data_rows, mc_rows, ylim_lower=0
                     y_buffer = 4 if ylim_upper_floor > 4 else 3 if ylim_upper_floor > 2 else 2 # Buffer to make room for legend
                     ylim_upper = float('1e'+str(ylim_upper_floor+y_buffer))
                 else:
-                    ylim_upper = round(max_y*1.5, -int(math.floor(log10(abs(max_y))))) #Buffer to make room for legend
+                    ylim_upper = round(max_y*1.5, -int(math.floor(math.log10(abs(max_y))))) #Buffer to make room for legend
+                    ylim_lower = 0
                 ylim = [ylim_lower, ylim_upper]
             else:
                 ylim = args.limits['y'] if 'y' in args.limits else None
@@ -148,7 +149,6 @@ def autoscale_values(args, df_filtered, weight, data_rows, mc_rows, ylim_lower=0
      
 
 def process_one_file(infile, args):
-    logger.info("Processing: " + infile)
     df = read_binned_df(infile, dtype={args.dataset_col: str})
     weights = weighting_vars(df)
     autoscale = hasattr(args, "autoscale")
@@ -217,9 +217,9 @@ def dress_main_plots(plots, annotations=[], yscale=None, ylabel=None, legend={},
                 lims = map(float, lims)
                 getattr(main_ax, "set_%slim" % axis)(*lims)
             elif lims.endswith("%"):
-                main_ax.margins(**{axis: float(lims[:-1])})
+                 main_ax.margins(**{axis: float(lims[:-1])})
         if xtickrotation:
-            matplotlib.pyplot.xticks(rotation=xtickrotation)
+            matplotlib.pyplot.xticks(rotation=90)
 
 
 def save_plots(infile, weight, plots, outdir, extensions):

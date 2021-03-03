@@ -227,6 +227,8 @@ def actually_plot(df, x_axis, y, yerr, kind, label, ax, dataset_col="dataset",
                 continue
             if add_error:
                 color = dataset_colours[dset] if dset in dataset_colours else dataset_colours
+                if type(color)==dict:
+                    raise RuntimeError(f"Dataset {dset} not found in {color}")
                 dset_df = df.reset_index().loc[df.reset_index()[dataset_col] == dset].reset_index()
                 x = dset_df[x_axis]
                 draw(ax, "fill_between", x, ys=["y1", "y2"], y1=dset_df.eval("sumw+sqrt(sumw2)"),
