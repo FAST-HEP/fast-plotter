@@ -219,7 +219,7 @@ def dress_main_plots(plots, annotations=[], yscale=None, ylabel=None, legend={},
             elif lims.endswith("%"):
                  main_ax.margins(**{axis: float(lims[:-1])})
         if xtickrotation:
-            matplotlib.pyplot.xticks(rotation=90)
+            matplotlib.pyplot.xticks(rotation=xtrickrotation)
 
 
 def save_plots(infile, weight, plots, outdir, extensions):
