@@ -105,7 +105,7 @@ def process_cfg(cfg_file, args, make_arg_parser=None):
 
 def autoscale_values(args, df_filtered, weight, data_rows, mc_rows, ylim_lower=0.1, legend_size=2):
     dims = tuple(dim for dim in binning_vars(df_filtered) if dim != args.dataset_col)
-    limits={}
+    limits = {}
     if hasattr(args, "autoscale"):
         for dim in dims:
             if 'y' in args.autoscale:
@@ -116,32 +116,32 @@ def autoscale_values(args, df_filtered, weight, data_rows, mc_rows, ylim_lower=0
                     max_data = df_filtered.loc[data_rows, 'n'].max() if 'n' in df_filtered.columns else 0.1
                     max_y = max(max_mc, max_data)
                 max_y = max_y if max_y >= 1 else 1
-                if args.yscale=='log': 
+                if args.yscale == 'log':
                     ylim_upper_floor = math.floor(math.log10(max_y))
-                    y_buffer = legend_size + 2 if ylim_upper_floor > 4 /
-                               else legend_size if ylim_upper_floor > 2
-                               else legend_size # Buffer to make room for legend
+                    y_buffer = legend_size + 2 if ylim_upper_floor > 4 \
+                               else legend_size +1 if ylim_upper_floor > 2 \
+                               else legend_size  #Buffer for legend
                     ylim_upper = float('1e'+str(ylim_upper_floor+y_buffer))
                     ylim_lower = 1e-1
                 else:
-                    ylim_upper = round(max_y*1.5, -int(math.floor(math.log10(abs(max_y))))) #Buffer for legend
+                    ylim_upper = round(max_y*1.5, -int(math.floor(math.log10(abs(max_y)))))  #Buffer for legend
                     ylim_lower = 0
                 ylim = [ylim_lower, ylim_upper]
             else:
                 ylim = args.limits['y'] if 'y' in args.limits else None
-            df_aboveMin = df_filtered.loc[df_filtered['sumw']>ylim_lower] 
+            df_aboveMin = df_filtered.loc[df_filtered['sumw'] > ylim_lower]
             xcol = df_aboveMin.index.get_level_values(dim)
-            if 'x' in args.autoscale: #Determine x-axis limits
-                if is_intervals(xcol): #If x-axis is interval, take rightmost and leftmost intervals unless they are inf
+            if 'x' in args.autoscale:  #Determine x-axis limits
+                if is_intervals(xcol):  #If x-axis is interval, take right and leftmost intervals unless they are inf
                     max_x = xcol.right.max() if np.isfinite(xcol.right.max()) else xcol.left.max()
                     min_x = xcol.left.min() if np.isfinite(xcol.left.min()) else xcol.right.min()
-                    if not (np.isfinite(max_x) and hasattr(args, "show_over_underflow") and args.show_over_underflow:
+                    if not np.isfinite(max_x) and hasattr(args, "show_over_underflow") and args.show_over_underflow:
                         logger.warn("Cannot autoscale overflow bin for x-axis. Removing.")
                     xlim = [min_x, max_x]
                 elif isinstance(xcol, numbers.Number):
                     xlim = [xcol.min, xcol.max]
                 else:
-                    xlim = [-0.5, len(xcol.unique())-0.5] #For non-numeric x-axis (e.g. mtn range) 
+                    xlim = [-0.5, len(xcol.unique()) - 0.5]  #For non-numeric x-axis (e.g. mtn range)
             else:
                 xlim = args.limits['x'] if 'x' in args.limits else None
 
@@ -149,12 +149,12 @@ def autoscale_values(args, df_filtered, weight, data_rows, mc_rows, ylim_lower=0
     else:
         xlim = args.limits['x'] if 'x' in args.limits else None
         ylim = args.limits['y'] if 'y' in args.limits else None
-        limits  = {dim:{"x":xlim, "y":ylim} for dim in dims}
+        limits  = {dim: {"x": xlim, "y": ylim} for dim in dims}
     return limits
-        
-     
+
 
 def process_one_file(infile, args):
+    logger.info("Processing: " + infile)
     df = read_binned_df(infile, dtype={args.dataset_col: str})
     weights = weighting_vars(df)
     autoscale = hasattr(args, "autoscale")
