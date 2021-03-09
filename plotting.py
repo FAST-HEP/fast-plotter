@@ -1,0 +1,631 @@
+from . import utils as utils
+from . import statistics as stats
+import traceback
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import matplotlib.colors as mc
+import logging
+import re
+logger = logging.getLogger(__name__)
+
+
+def change_brightness(color, amount):
+    if amount is None:
+        return
+    import colorsys
+    try:
+        c = mc.cnames[color]
+    except Exception:
+        c = color
+    if isinstance(color, tuple):
+        color = mc.to_rgb(c)
+    c = colorsys.rgb_to_hls(*color)
+    return colorsys.hls_to_rgb(c[0], 1 - amount * (1 - c[1]), c[2])
+
+
+def plot_all(df, project_1d=True, project_2d=True, data="data", signal=None, dataset_col="dataset",
+             yscale="log", lumi=None, annotations=[], dataset_order=None,
+             continue_errors=True, bin_variable_replacements={}, colourmap="nipy_spectral",
+             figsize=None, other_dset_types={}, **kwargs):
+    figures = {}
+
+    dimensions = utils.binning_vars(df)
+    ran_ok = True
+
+    if len(dimensions) == 1:
+        df = utils.rename_index(df, bin_variable_replacements)
+        figures[(("yscale", yscale),)] = plot_1d(
+            df, yscale=yscale, annotations=annotations)
+
+    if dataset_col in dimensions:
+        dimensions = tuple(dim for dim in dimensions if dim != dataset_col)
+        if dataset_order is None:
+            dataset_order = df.index.unique(dataset_col).tolist()
+
+    if project_1d and len(dimensions) >= 1:
+        for dim in dimensions:
+            logger.info("Making 1D Projection: " + dim)
+            projected = df.groupby(level=(dim, dataset_col)).sum()
+            projected = utils.rename_index(
+                projected, bin_variable_replacements)
+            projected = utils.order_datasets(projected, "sum-ascending", dataset_col)
+            try:
+                plot = plot_1d_many(projected, data=data, signal=signal,
+                                    dataset_col=dataset_col, scale_sims=lumi,
+                                    colourmap=colourmap, dataset_order=dataset_order,
+                                    figsize=figsize, other_dset_args=other_dset_types,
+                                    dim=dim, **kwargs)
+                figures[(("project", dim), ("yscale", yscale))] = plot
+            except Exception as e:
+                if not continue_errors:
+                    raise
+                logger.error("Couldn't plot 1D projection: " + dim)
+                logger.error(traceback.print_exc())
+                logger.error(e)
+                ran_ok = False
+
+    if project_2d and len(dimensions) > 2:
+        logger.warn("project_2d is not yet implemented")
+
+    return figures, ran_ok
+
+
+class ColorDict():
+    def __init__(self, order=None, named=None, n_colors=10, cmap="nipy_spectral", cmap_start=0.96, cmap_stop=0.2):
+        self.order = {}
+        if order is not None:
+            self.order = {n: i for i, n in enumerate(order)}
+            n_colors = max(n_colors, len(order))
+
+        if isinstance(cmap, str):
+            colmap_def = plt.get_cmap(cmap)
+            n_colors = max(colmap_def.N, n_colors) if colmap_def.N < 256 else n_colors
+        elif isinstance(cmap, dict):
+            colmap_def = plt.get_cmap(cmap.get("map"))
+            n_colors = cmap.get("n_colors", n_colors)
+            cmap_start = cmap.get("colour_start", cmap_start)
+            cmap_stop = cmap.get("colour_stop", cmap_stop)
+
+        self.defaults = [colmap_def(i) for i in np.linspace(cmap_start, cmap_stop, n_colors)]
+        self.named = named if named is not None else {}
+
+    def get_colour(self, index=None, name=None):
+        if index is None and name is None:
+            raise RuntimeError("'Index' and 'name' cannot both be None")
+
+        if name in self.named:
+            return self.named[name]
+
+        if name in self.order:
+            return self.defaults[self.order[name]]
+
+        if index is None:
+            raise RuntimeError("'index' was not provided and we got an unknown named object '%s'" % name)
+
+        return self.defaults[index]
+
+
+class FillColl(object):
+    def __init__(self, n_colors=10, ax=None, fill=True, line=True, dataset_colours=None,
+                 colourmap="nipy_spectral", dataset_order=None, linewidth=0.5, expected_xs=None,
+                 other_dset_types=False, add_label_other=True, style_other=None, colour_other=None):
+        self.calls = -1
+        self.expected_xs = expected_xs
+        self.colors = ColorDict(n_colors=n_colors, order=dataset_order,
+                                named=dataset_colours, cmap=colourmap)
+
+        self.ax = ax
+        self.fill = fill
+        self.line = line
+        self.linewidth = linewidth
+        self.other_dset_types = other_dset_types
+        self.add_label_other = add_label_other
+        self.style_other = style_other
+        self.colour_other = colour_other
+
+    def pre_call(self, column):
+        ax = self.ax
+        if not ax:
+            ax = plt.gca()
+        color = self.colors.get_colour(index=self.calls, name=column.name)
+        x = column.index
+        y = column.values
+        return ax, x, y, color
+
+    def __call__(self, col, **kwargs):
+        ax, x, y, color = self.pre_call(col)
+        if self.fill and not self.other_dset_types:
+            draw(ax, "fill_between", x=x, ys=["y1"],
+                 y1=y, label=col.name, expected_xs=self.expected_xs,
+                 linewidth=0, color=color, **kwargs)
+        if self.line:
+            if self.fill:
+                if self.other_dset_types:
+                    style = self.style_other
+                    label = col.name if self.add_label_other else None
+                    color = color if type(color) == list else self.colour_other
+                    width = self.linewidth
+                else:
+                    style = "-"
+                    label = None
+                    color = "k"
+                    width = self.linewidth
+            else:
+                color = None
+                label = col.name
+                width = 2
+                style = "--"
+            draw(ax, "step", x=x, ys=["y"], y=y, expected_xs=self.expected_xs,
+                 color=color, linewidth=width, label=label, linestyle=style)
+        self.calls += 1
+
+
+class BarColl(FillColl):
+    def __call__(self, col, **kwargs):
+        ax, x, y, color = self.pre_call(col)
+        align = "center"
+        if x.dtype.kind in 'biufc':
+            align = "edge"
+        facecolor = list(color)
+        facecolor[-1] *= 0.5
+        ax.bar(x, y, edgecolor=color, facecolor=facecolor, width=1, label=col.name, align=align)
+        self.calls += 1
+
+
+def actually_plot(df, x_axis, y, yerr, kind, label, ax, dataset_col="dataset",
+                  dataset_colours=None, colourmap="nipy_spectral",
+                  dataset_order=None, other_cfg_args={}):
+    expected_xs = df.index.unique(x_axis).values
+    if kind == "scatter":
+        draw(ax, "errorbar", x=df.reset_index()[x_axis], ys=["y", "yerr"], y=df[y], yerr=df[yerr],
+             color="k", ms=3.5, fmt="o", label=label, expected_xs=expected_xs, add_ends=False)
+        return
+    if dataset_order is not None:
+        input_datasets = df.index.unique(dataset_col)
+        dataset_order = dataset_order + [d for d in input_datasets if d not in dataset_order]
+    n_datasets = df.groupby(level=dataset_col).count()
+    n_datasets = len(n_datasets[n_datasets != 0])
+
+    vals = df[y].unstack(dataset_col).fillna(method="ffill", axis="columns")
+    if kind == "line":
+        filler = FillColl(n_datasets, ax=ax, fill=False, colourmap=colourmap,
+                          dataset_colours=dataset_colours,
+                          dataset_order=dataset_order, expected_xs=expected_xs)
+        vals.apply(filler, axis=0, step="mid")
+        return
+    elif kind == "bar":
+        filler = BarColl(n_datasets, ax=ax, colourmap=colourmap,
+                         dataset_order=dataset_order, expected_xs=expected_xs)
+        vals.apply(filler, axis=0, step="mid")
+    elif kind == "fill":
+        filler = FillColl(n_datasets, ax=ax, colourmap=colourmap,
+                          dataset_colours=dataset_colours,
+                          dataset_order=dataset_order,
+                          line=False, expected_xs=expected_xs)
+        vals.iloc[:, ::-1].apply(filler, axis=0, step="mid")
+    elif kind == "other_dset_types":
+        if 'regex' not in other_cfg_args:
+            raise RuntimeError("Must specify a regex for other plotting datatype to be applied to")
+        dataset_colours = other_cfg_args["colours"] if other_cfg_args["colours"] else dataset_colours
+        options = ["alpha", "style", "width", "add_label", "add_error", "regex"]
+        alpha, style, width, add_label, add_error, regex = [other_cfg_args[key] for key in options]
+        filler = FillColl(n_datasets, ax=ax, fill=True, colourmap=colourmap, dataset_colours=dataset_colours,
+                          dataset_order=dataset_order, expected_xs=expected_xs, linewidth=width,
+                          other_dset_types=other_cfg_args, add_label_other=add_label, style_other=style,
+                          colour_other=dataset_colours)
+        vals.apply(filler, axis=0, step="mid")
+        for dset in list(set(df.reset_index()[dataset_col])):
+            if not re.compile(regex).match(dset):
+                continue
+            if add_error:
+                color = dataset_colours[dset] if dset in dataset_colours else dataset_colours
+                if type(color)==dict:
+                    raise RuntimeError(f"Dataset {dset} not found in {color}")
+                dset_df = df.reset_index().loc[df.reset_index()[dataset_col] == dset].reset_index()
+                x = dset_df[x_axis]
+                draw(ax, "fill_between", x, ys=["y1", "y2"], y1=dset_df.eval("sumw+sqrt(sumw2)"),
+                     y2=dset_df.eval("sumw-sqrt(sumw2)"), color=color, alpha=alpha, expected_xs=expected_xs)
+
+    elif kind == "fill-error-last":
+        actually_plot(df, x_axis, y, yerr, "fill", label, ax, dataset_colours=dataset_colours,
+                      dataset_col=dataset_col, colourmap=colourmap, dataset_order=dataset_order)
+        summed = df.unstack(dataset_col).fillna(method="ffill", axis="columns")
+        last_dataset = summed.columns.get_level_values(1)[n_datasets - 1]
+        summed = summed.xs(last_dataset, level=1, axis="columns")
+        x = summed.index.values
+        y_down = (summed[y] - summed[yerr]).values
+        y_up = (summed[y] + summed[yerr]).values
+        draw(ax, "fill_between", x, ys=["y1", "y2"], y2=y_down, y1=y_up, color="gray",
+             alpha=0.7, expected_xs=expected_xs)
+    else:
+        raise RuntimeError("Unknown value for 'kind', '{}'".format(kind))
+
+
+def standardize_values(x, y_values=[], fill_val=0, expected_xs=None, add_ends=True):
+    """
+    Standardize a set of arrays so they're ready to be plotted directly for matplotlib
+
+    Algorithm:
+    if any requested X values are missing:
+        insert dummy values into X and Y values at the right location
+    """
+    if expected_xs is not None:
+        x, y_values = add_missing_vals(x, expected_xs, y_values=y_values, fill_val=fill_val)
+
+    ticks = None
+    if x.dtype.kind not in 'biufc' and not isinstance(x[0], pd.Interval):
+        x, ticks = np.arange(len(x)), x
+        fill_val = [fill_val] * len(y_values) + [""]
+        y_values.append(ticks)
+
+    if isinstance(x[0], pd.Interval):
+        if isinstance(x, pd.arrays.IntervalArray) and not x.is_non_overlapping_monotonic:
+            return (x,) + tuple(y_values)
+
+        x, y_values = intervals_to_breaks(x, y_values, fill_val)
+
+    if x.dtype.kind in 'bifc':
+        if not isinstance(x, np.ndarray):
+            x = x.values
+
+        x = replace_infs(x)
+
+        if add_ends:
+            x, y_values = pad_ends(x, y_values=y_values, fill_val=fill_val)
+
+    if ticks is not None:
+        ticks = y_values[-1]
+        y_values = y_values[:-1]
+
+    return (x, ticks) + tuple(y_values)
+
+
+def intervals_to_breaks(x, y_values, fill_val=None):
+    """
+    Convert a list of intervals into a list of breaks, where overlapping
+    interval edges are removed
+    """
+    left = x.left
+    right = x.right
+
+    mid_breaks = np.vstack((left[1:], right[:-1]))
+    nonmatches = left[1:] != right[:-1]
+    selected = np.vstack((np.ones_like(nonmatches), nonmatches))
+    mid_breaks = mid_breaks[selected]
+
+    breaks = np.concatenate([left[:1], mid_breaks, right[-1:]])
+
+    new_ys = []
+    for y in y_values:
+        newy = np.vstack([y[1:], np.full_like(y[1:], fill_val)])
+        newy = np.concatenate([y[:1], newy[selected], [fill_val]])
+        new_ys.append(newy)
+
+    return breaks, new_ys
+
+
+def replace_infs(x):
+    """
+    Replace (pos or neg) infinities at the ends of an array of floats
+
+    Algorithm: X has +/- inf at an end, replace this X value with +/- the
+    previous/next value of X +/- the mean width in X
+    """
+    x = x[:]  # Make a copy of the array
+    is_left_inf = np.isneginf(x[0])
+    is_right_inf = np.isposinf(x[-1])
+    width_slice = x[1 if is_left_inf else None:-1 if is_right_inf else None]
+    mean_width = width_slice[0]
+    if len(width_slice) > 1:
+        mean_width = np.diff(width_slice).mean()
+    if is_left_inf:
+        x[0] = x[1] - mean_width
+    if is_right_inf:
+        x[-1] = x[-2] + mean_width
+    return x
+
+
+def add_missing_vals(x, expected_xs, y_values=[], fill_val=0):
+    """
+    Check from a list of expected x values, if all occur in x.  If any are missing
+    """
+    insert = np.isin(expected_xs, x)
+    new_ys = []
+    for y in y_values:
+        new = np.full_like(expected_xs, fill_val, dtype=y.dtype)
+        new[insert] = y
+        new_ys.append(new)
+    if isinstance(expected_xs, (pd.Index, pd.MultiIndex)):
+        new_x = expected_xs.values
+    else:
+        new_x = expected_xs.copy()
+    return new_x, new_ys
+
+
+def pad_ends(x, y_values=[], fill_val=0):
+    """
+    Insert a dummy entry to X and Y for all arrays
+    """
+    mean_width = x[0]
+    if len(x) > 1:
+        mean_width = np.diff(x).mean()
+
+    if isinstance(fill_val, (tuple, list)):
+        assert len(y_values) == len(fill_val), "fill_val must be a scalar, or an iterable with length equal to y_values"
+    else:
+        fill_val = [fill_val] * len(y_values)
+
+    x = np.concatenate((x[0:1] - mean_width, x, x[-1:] + mean_width), axis=0)
+    new_values = [np.concatenate(([f], y, [f]), axis=0) for y, f in zip(y_values, fill_val)]
+    return x, tuple(new_values)
+
+
+def plot_1d_many(df, prefix="", data="data", signal=None, dataset_col="dataset",
+                 plot_sims="stack", plot_data="sum", plot_signal=None,
+                 kind_data="scatter", kind_sims="fill-error-last", kind_signal="line",
+                 scale_sims=None, summary="ratio-error-both", colourmap="nipy_spectral",
+                 dataset_order=None, figsize=(5, 6), show_over_underflow=False,
+                 dataset_colours=None, err_from_sumw2=False, data_legend="Data",
+                 other_dset_args={}, dim=None, **kwargs):
+    y = "sumw"
+    yvar = "sumw2"
+    yerr = "err"
+    if prefix:
+        y = prefix + ":" + y
+        yvar = prefix + ":" + yvar
+        yerr = prefix + ":" + yerr
+
+    if not show_over_underflow:
+        df = utils.drop_over_underflow(df)
+    in_df_data, in_df_sims = utils.split_data_sims(
+        df, data_labels=data, dataset_level=dataset_col)
+    if scale_sims is not None and in_df_sims is not None:
+        in_df_sims[y] *= scale_sims
+        in_df_sims[yvar] *= scale_sims * scale_sims
+    if signal:
+        in_df_signal, in_df_sims = utils.split_data_sims(
+            in_df_sims, data_labels=signal, dataset_level=dataset_col)
+    else:
+        in_df_signal = None
+
+    config_extend = []
+    if other_dset_args:
+        for dset_type in other_dset_args.keys():
+            dset_type_labels = other_dset_args[dset_type]['regex']
+            other_defaults = {"style": "-", "alpha": 0.2, "width": 1,
+                              "colours": [], "dset_type":dset_type, "add_label": True,
+                              "add_error": True, "plot_ratio":False}
+            default_specs = {key: val for key, val
+                             in other_defaults.items()
+                             if key not in other_dset_args[dset_type].keys()}
+            other_dset_args[dset_type].update(default_specs)
+            in_df_other, in_df_sims = utils.split_data_sims(
+                 in_df_sims, data_labels=dset_type_labels, dataset_level=dataset_col)
+            config_extend.append((in_df_other, None, "other_dset_types",
+                                  dset_type_labels, "plot_other_dset", other_dset_args[dset_type]))
+    else:
+        in_df_other = None
+    
+    def_cfg_args = {"dset_type":""}
+    config = [(in_df_sims, plot_sims, kind_sims, "Monte Carlo", "plot_sims", def_cfg_args),
+              (in_df_data, plot_data, kind_data, data_legend, "plot_data", def_cfg_args),
+              (in_df_signal, plot_signal, kind_signal, "Signal", "plot_signal", def_cfg_args),
+              ]
+
+    config.extend(config_extend)
+
+    if in_df_data is None or in_df_sims is None:
+        summary = None
+    if not summary:
+        fig, main_ax = plt.subplots(1, 1, figsize=[float(i) for i in figsize])
+    else:
+        fig, ax = plt.subplots(
+            2, 1, gridspec_kw={"height_ratios": (3, 1)}, sharex=True, figsize=[float(i) for i in figsize])
+        fig.subplots_adjust(hspace=.1)
+        main_ax, summary_ax = ax
+    x_axis = [col for col in df.index.names if col != dataset_col]
+    if len(x_axis) > 1:
+        raise RuntimeError("Too many dimensions to plot things in 1D")
+    if len(x_axis) == 0:
+        raise RuntimeError(
+            "Too few dimensions to multiple 1D graphs, use plot_1d instead")
+    x_axis = x_axis[0]
+
+    for df, combine, style, label, var_name, other_cfg_args in config:
+        if (df is None or len(df) == 0):
+            continue
+        merged = _merge_datasets(df, combine, dataset_col, param_name=var_name, err_from_sumw2=err_from_sumw2)
+        actually_plot(merged, x_axis=x_axis, y=y, yerr=yerr, kind=style, label=label,
+                      ax=main_ax, dataset_col=dataset_col, dataset_colours=dataset_colours,
+                      colourmap=colourmap, dataset_order=dataset_order, other_cfg_args=other_cfg_args)
+    main_ax.set_xlabel(x_axis)
+
+    if not summary:
+        return main_ax, None
+
+    summary_ax = ax[1]
+    err_msg = "Unknown value for summary, '{}'".format(summary)
+    if summary.startswith("ratio"):
+        main_ax.set_xlabel("")
+        summed_data = _merge_datasets(
+            in_df_data, "sum", dataset_col=dataset_col, err_from_sumw2=err_from_sumw2)
+        summed_sims = _merge_datasets(
+            in_df_sims, "sum", dataset_col=dataset_col, err_from_sumw2=err_from_sumw2)
+        if summary == "ratio-error-both":
+            error = "both"
+        elif summary == "ratio-error-markers":
+            error = "markers"
+        else:
+            raise RuntimeError(err_msg)
+        kwargs.setdefault("ratio_ylim", [0., 2.])
+        kwargs.setdefault("ratio_ylabel", "Data / MC")
+        plot_ratio(summed_data, summed_sims, x=x_axis,
+                   y=y, yerr=yerr, ax=summary_ax, error=error,
+                   ylim=kwargs["ratio_ylim"], ylabel=kwargs["ratio_ylabel"])
+        if other_dset_args:
+            for df, combine, style, label, var_name, other_dset_args in config:
+                if (style == "other_dset_types") and (other_dset_args['plot_ratio'] == True):
+                    error = "both"
+                    dset = other_dset_args['dset_type']
+                    color = dataset_colours[dset] if dset in dataset_colours else dataset_colours
+                    add_error = other_dset_args['add_error']
+                    summed_dset = _merge_datasets(
+                        df, "sum", dataset_col=dataset_col, err_from_sumw2=err_from_sumw2)
+                    plot_ratio(summed_data, summed_dset, x=x_axis,
+                               y=y, yerr=yerr, ax=summary_ax, error=error, zorder=21,
+                               ylim=kwargs["ratio_ylim"], ylabel=kwargs["ratio_ylabel"],
+                               color=color, add_error=add_error)
+                    
+            
+    else:
+        raise RuntimeError(err_msg)
+    return main_ax, summary_ax
+
+
+def _merge_datasets(df, style, dataset_col, param_name="_merge_datasets", err_from_sumw2=False):
+    if style == "stack":
+        df = utils.stack_datasets(df, dataset_level=dataset_col)
+    elif style == "sum":
+        df = utils.sum_over_datasets(df, dataset_level=dataset_col)
+    elif style:
+        msg = "'{}' must be either 'sum', 'stack' or None. Got {}"
+        raise RuntimeError(msg.format(param_name, style))
+    utils.calculate_error(df, do_rel_err=not err_from_sumw2)
+    return df
+
+
+def annotate_lines(cfg, main_ax, summary_ax):
+    linetype = list(cfg.keys())[0]
+    annotDict = cfg[linetype]
+    if 'values' not in annotDict.keys():
+        raise(RuntimeError("Must provide values for line placement."))
+    annotDefaults = {"style": "-", "alpha": 1, "width": 1.5,
+                     "colour": 'k', "label": None, "vmin": 0,
+                     "vmax": 1, "zorder": 10, "axes": ["main"]}
+    annotDict.update({key: value for key, value in annotDefaults.items()
+                      if key not in annotDict.keys()})
+    lineKeys = ['values', 'style', 'alpha', 'width', 'colour', 'label', 'vmin', 'vmax', 'zorder', 'axes']
+    values, style, alpha, width, colour, label, vmin, vmax, zorder, axes = [annotDict[key] for key in lineKeys]
+    for axis in axes:
+        awidth = 0.6 * width if (axis == 'summary') else width
+        ax = main_ax if (str(axis) == 'main') else summary_ax if (str(axis) == 'summary') else None
+        if ax is None:
+            raise(RuntimeError("Axis must exist and either be 'main' or 'summary'. {} is None".format(axis)))
+        for value in values:
+            value = float(value)
+            if linetype == 'hlines':
+                ax.axhline(value, vmin, vmax, color=colour, label=label,
+                           alpha=alpha, ls=style, lw=awidth, zorder=zorder)
+            if linetype == 'vlines':
+                ax.axvline(value, vmin, vmax, color=colour, label=label,
+                           alpha=alpha, ls=style, lw=awidth, zorder=zorder)
+
+
+def add_annotations(annotations, ax, summary_ax=None, expected_xs=None):
+    for cfg in annotations:
+        if 'hlines' in cfg.keys() or 'vlines' in cfg.keys():
+            annotate_lines(cfg, ax, summary_ax)
+            continue
+        cfg = cfg.copy()
+        s = cfg.pop("text")
+        xy = cfg.pop("position")
+        cfg.setdefault("xycoords", "axes fraction")
+        ax.annotate(s, xy=xy, **cfg)
+
+
+def plot_1d(df, kind="line", yscale="lin"):
+    fig, ax = plt.subplots(1)
+    df["sumw"].plot(kind=kind)
+    ax.set_axisbelow(True)
+    plt.grid(True)
+    plt.yscale(yscale)
+    return fig
+
+
+def plot_ratio(data, sims, x, y, yerr, ax, error="both", ylim=[0., 2],
+               ylabel="Data / MC", color="k", zorder=22, add_error=True):
+    # make sure both sides agree with the binning
+    merged = data.join(sims, how="left", lsuffix="data", rsuffix="sims")
+    data = merged.filter(like="data", axis="columns").fillna(0)
+    data.columns = [col.replace("data", "") for col in data.columns]
+    sims = merged.filter(like="sims", axis="columns")
+    sims.columns = [col.replace("sims", "") for col in sims.columns]
+
+    s, s_err = sims[y], sims[yerr]
+    d, d_err = data[y], data[yerr]
+    x_axis = data.index.get_level_values(x)
+
+    if error == "markers":
+        central, lower, upper = stats.try_root_ratio_plot(d, d_err, s, s_err)
+        values = standardize_values(x_axis, y_values=(central, lower, upper), add_ends=False)
+        x_axis, ticks, central, lower, upper = values
+        mask = (central != 0) & (lower != 0)
+        ax.errorbar(x=x_axis[mask], y=central[mask], yerr=(lower[mask], upper[mask]),
+                    fmt="o", markersize=4, color="k", zorder=zorder)
+        if add_error:
+             draw(ax, "errorbar", x_axis[mask], ys=["y", "yerr"],
+                 y=central[mask], yerr=(lower[mask], upper[mask]),
+                 fmt="o", markersize=4, color="gray", zorder=zorder-1)
+
+    elif error == "both":
+        ratio = d / s
+        rel_d_err = (d_err / s)
+        rel_s_err = (s_err / s)
+
+        draw(ax, "errorbar", x_axis, ys=["y", "yerr"],
+             y=ratio, yerr=rel_d_err,
+             fmt="o", markersize=4, color=color, zorder=zorder)
+        if add_error:
+            draw(ax, "fill_between", x_axis, ys=["y1", "y2"], color="gray",
+                 y2=1 + rel_s_err, y1=1 - rel_s_err, fill_val=1, alpha=0.7, zorder=zorder-1)
+
+    ax.set_ylim(ylim)
+    ax.grid(True)
+    ax.set_axisbelow(True)
+    ax.set_xlabel(x)
+    ax.set_ylabel(ylabel)
+
+
+def convert_intervals(vals):
+    if vals is None:
+        return vals
+    if isinstance(vals, pd.Series) and isinstance(vals[0], pd.Interval):
+        vals = vals.apply(lambda i: i.mid).values
+    elif isinstance(vals, (pd.arrays.IntervalArray, pd.IntervalIndex)):
+        vals = vals.mid
+    return vals
+
+
+def is_intervals(vals):
+    if isinstance(vals, pd.Series) and isinstance(vals[0], pd.Interval):
+        return True
+    elif isinstance(vals, (pd.arrays.IntervalArray, pd.IntervalIndex)):
+        return True
+    return False
+
+
+def draw(ax, method, x, ys, other_dset_args={}, **kwargs):
+    fill_val = kwargs.pop("fill_val", 0)
+    expected_xs = kwargs.pop("expected_xs", None)
+    add_ends = kwargs.pop("add_ends", True)
+    if method == "fill_between":
+        kwargs["step"] = "post" if is_intervals(x) else "mid"
+    elif method == "step":
+        kwargs["where"] = "post" if is_intervals(x) else "mid"
+    else:
+        x = convert_intervals(x)
+        expected_xs = convert_intervals(expected_xs)
+    values = standardize_values(x, [kwargs[y] for y in ys],
+                                fill_val=fill_val,
+                                add_ends=add_ends,
+                                expected_xs=expected_xs)
+    x = values[0]
+    ticks = values[1]
+    new_ys = values[2:]
+    kwargs.update(dict(zip(ys, new_ys)))
+    getattr(ax, method)(x=x, **kwargs)
+    if ticks is not None:
+        ax.set_xticks(x)
+        ax.set_xticklabels(ticks)
+    return x, ticks
