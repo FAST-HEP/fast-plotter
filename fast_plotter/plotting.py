@@ -465,7 +465,7 @@ def plot_1d_many(df, prefix="", data="data", signal=None, dataset_col="dataset",
                    ylim=kwargs["ratio_ylim"], ylabel=kwargs["ratio_ylabel"])
         if other_dset_args:
             for df, combine, style, label, var_name, other_dset_args in config:
-                if (style == "other_dset_types") and (other_dset_args['plot_ratio'):
+                if (style == "other_dset_types") and (other_dset_args['plot_ratio']):
                     error = "both"
                     dset = other_dset_args['dset_type']
                     color = dataset_colours[dset] if dset in dataset_colours else dataset_colours
