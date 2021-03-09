@@ -5,9 +5,8 @@ import os
 import six
 import logging
 import matplotlib
-import math
+import numpy as np
 import numbers
-#import numpy as np
 matplotlib.use('Agg')
 matplotlib.rcParams.update({'figure.autolayout': True})
 from .version import __version__  # noqa
@@ -118,14 +117,14 @@ def autoscale_values(args, df_filtered, weight, data_rows, mc_rows, ylim_lower=0
                     max_y = max(max_mc, max_data)
                 max_y = max_y if max_y >= 1 else 1
                 if args.yscale == 'log':
-                    ylim_upper_floor = math.floor(math.log10(max_y))
+                    ylim_upper_floor = int(np.floor(np.log10(max_y)))
                     y_buffer = (legend_size + 2 if ylim_upper_floor > 4
                                 else legend_size + 1 if ylim_upper_floor > 2
                                 else legend_size)  # Buffer for legend
                     ylim_upper = float('1e'+str(ylim_upper_floor+y_buffer))
                     ylim_lower = 1e-1
                 else:
-                    ylim_upper = round(max_y*1.5, -int(math.floor(math.log10(abs(max_y)))))  # Buffer for legend
+                    ylim_upper = round(max_y*1.5, -int(np.floor(np.log10(abs(max_y)))))  # Buffer for legend
                     ylim_lower = 0
                 ylim = [ylim_lower, ylim_upper]
             else:
@@ -134,8 +133,8 @@ def autoscale_values(args, df_filtered, weight, data_rows, mc_rows, ylim_lower=0
             xcol = df_aboveMin.index.get_level_values(dim)
             if 'x' in args.autoscale:  # Determine x-axis limits
                 if is_intervals(xcol):  # If x-axis is interval, take right and leftmost intervals unless they are inf
-                    max_x = xcol.right.max() if numpy.isfinite(xcol.right.max()) else xcol.left.max()
-                    min_x = xcol.left.min() if numpy.isfinite(xcol.left.min()) else xcol.right.min()
+                    max_x = xcol.right.max() if np.isfinite(xcol.right.max()) else xcol.left.max()
+                    min_x = xcol.left.min() if np.isfinite(xcol.left.min()) else xcol.right.min()
                     if not np.isfinite(max_x) and hasattr(args, "show_over_underflow") and args.show_over_underflow:
                         logger.warn("Cannot autoscale overflow bin for x-axis. Removing.")
                     xlim = [min_x, max_x]
@@ -158,7 +157,6 @@ def process_one_file(infile, args):
     logger.info("Processing: " + infile)
     df = read_binned_df(infile, dtype={args.dataset_col: str})
     weights = weighting_vars(df)
-    autoscale = hasattr(args, "autoscale")
     legend_size = args.legend_size if hasattr(args, "legend_size") else 2
     ran_ok = True
     for weight in weights:
@@ -205,9 +203,8 @@ def process_one_file(infile, args):
 
 
 def dress_main_plots(plots, annotations=[], yscale=None, ylabel=None, legend={},
-                     limits={}, xtickrotation=None, autoscale=False, **kwargs):
+                     limits={}, xtickrotation=None, **kwargs):
 
-    autoscale = True if not not autoscale else False
     for properties, (main_ax, summary_ax) in plots.items():
         projections = [prop[1] for prop in properties if prop[0] == "project"]
         x_axis = projections[0] if (len(projections) == 1) else None
