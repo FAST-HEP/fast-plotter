@@ -54,7 +54,7 @@ def plot_all(df, project_1d=True, project_2d=True, data="data", signal=None, dat
                 plot = plot_1d_many(projected, data=data, signal=signal,
                                     dataset_col=dataset_col, scale_sims=lumi,
                                     colourmap=colourmap, dataset_order=dataset_order,
-                                    figsize=figsize, other_dset_type_args=other_dset_types,
+                                    figsize=figsize, other_dset_args=other_dset_types,
                                     dim=dim, **kwargs)
                 figures[(("project", dim), ("yscale", yscale))] = plot
             except Exception as e:
@@ -175,7 +175,7 @@ class BarColl(FillColl):
 
 def actually_plot(df, x_axis, y, yerr, kind, label, ax, dataset_col="dataset",
                   dataset_colours=None, colourmap="nipy_spectral",
-                  dataset_order=None, other_dset_type_args={}, dset_type=None):
+                  dataset_order=None, other_cfg_args={}):
     expected_xs = df.index.unique(x_axis).values
     if kind == "scatter":
         draw(ax, "errorbar", x=df.reset_index()[x_axis], ys=["y", "yerr"], y=df[y], yerr=df[yerr],
@@ -205,21 +205,14 @@ def actually_plot(df, x_axis, y, yerr, kind, label, ax, dataset_col="dataset",
                           line=False, expected_xs=expected_xs)
         vals.iloc[:, ::-1].apply(filler, axis=0, step="mid")
     elif kind == "other_dset_types":
-        other_defaults = {"style": "-", "alpha": 0.2, "width": 1,
-                          "colours": [], "add_label": True, "add_error": True}
-        default_specs = {key: val for key, val
-                         in other_defaults.items()
-                         if key not in other_dset_type_args[dset_type].keys()}
-        other_dset_type_args[dset_type].update(default_specs)
-        if 'regex' not in other_dset_type_args[dset_type]:
+        if 'regex' not in other_cfg_args:
             raise RuntimeError("Must specify a regex for other plotting datatype to be applied to")
-        dset_type_args = other_dset_type_args[dset_type]
-        dataset_colours = dset_type_args["colours"] if dset_type_args["colours"] else dataset_colours
+        dataset_colours = other_cfg_args["colours"] if other_cfg_args["colours"] else dataset_colours
         options = ["alpha", "style", "width", "add_label", "add_error", "regex"]
-        alpha, style, width, add_label, add_error, regex = [dset_type_args[key] for key in options]
+        alpha, style, width, add_label, add_error, regex = [other_cfg_args[key] for key in options]
         filler = FillColl(n_datasets, ax=ax, fill=True, colourmap=colourmap, dataset_colours=dataset_colours,
                           dataset_order=dataset_order, expected_xs=expected_xs, linewidth=width,
-                          other_dset_types=other_dset_type_args, add_label_other=add_label, style_other=style,
+                          other_dset_types=other_cfg_args, add_label_other=add_label, style_other=style,
                           colour_other=dataset_colours)
         vals.apply(filler, axis=0, step="mid")
         for dset in list(set(df.reset_index()[dataset_col])):
@@ -374,7 +367,7 @@ def plot_1d_many(df, prefix="", data="data", signal=None, dataset_col="dataset",
                  scale_sims=None, summary="ratio-error-both", colourmap="nipy_spectral",
                  dataset_order=None, figsize=(5, 6), show_over_underflow=False,
                  dataset_colours=None, err_from_sumw2=False, data_legend="Data",
-                 other_dset_type_args={}, dim=None, **kwargs):
+                 other_dset_args={}, dim=None, **kwargs):
     y = "sumw"
     yvar = "sumw2"
     yerr = "err"
@@ -397,19 +390,27 @@ def plot_1d_many(df, prefix="", data="data", signal=None, dataset_col="dataset",
         in_df_signal = None
 
     config_extend = []
-    if other_dset_type_args:
-        for dset_type in other_dset_type_args.keys():
-            dset_type_labels = other_dset_type_args[dset_type]['regex']
+    if other_dset_args:
+        for dset_type in other_dset_args.keys():
+            dset_type_labels = other_dset_args[dset_type]['regex']
+            other_defaults = {"style": "-", "alpha": 0.2, "width": 1,
+                              "colours": [], "dset_type":dset_type, "add_label": True,
+                              "add_error": True, "plot_ratio":False}
+            default_specs = {key: val for key, val
+                             in other_defaults.items()
+                             if key not in other_dset_args[dset_type].keys()}
+            other_dset_args[dset_type].update(default_specs)
             in_df_other, in_df_sims = utils.split_data_sims(
                  in_df_sims, data_labels=dset_type_labels, dataset_level=dataset_col)
             config_extend.append((in_df_other, None, "other_dset_types",
-                                  dset_type_labels, "plot_other_dset", dset_type))
+                                  dset_type_labels, "plot_other_dset", other_dset_args[dset_type]))
     else:
         in_df_other = None
-
-    config = [(in_df_sims, plot_sims, kind_sims, "Monte Carlo", "plot_sims", None),
-              (in_df_data, plot_data, kind_data, data_legend, "plot_data", None),
-              (in_df_signal, plot_signal, kind_signal, "Signal", "plot_signal", None),
+    
+    def_cfg_args = {"dset_type":""}
+    config = [(in_df_sims, plot_sims, kind_sims, "Monte Carlo", "plot_sims", def_cfg_args),
+              (in_df_data, plot_data, kind_data, data_legend, "plot_data", def_cfg_args),
+              (in_df_signal, plot_signal, kind_signal, "Signal", "plot_signal", def_cfg_args),
               ]
 
     config.extend(config_extend)
@@ -431,14 +432,13 @@ def plot_1d_many(df, prefix="", data="data", signal=None, dataset_col="dataset",
             "Too few dimensions to multiple 1D graphs, use plot_1d instead")
     x_axis = x_axis[0]
 
-    for df, combine, style, label, var_name, dset_type in config:
+    for df, combine, style, label, var_name, other_cfg_args in config:
         if (df is None or len(df) == 0):
             continue
         merged = _merge_datasets(df, combine, dataset_col, param_name=var_name, err_from_sumw2=err_from_sumw2)
         actually_plot(merged, x_axis=x_axis, y=y, yerr=yerr, kind=style, label=label,
                       ax=main_ax, dataset_col=dataset_col, dataset_colours=dataset_colours,
-                      colourmap=colourmap, dataset_order=dataset_order,
-                      other_dset_type_args=other_dset_type_args, dset_type=dset_type)
+                      colourmap=colourmap, dataset_order=dataset_order, other_cfg_args=other_cfg_args)
     main_ax.set_xlabel(x_axis)
 
     if not summary:
@@ -458,10 +458,26 @@ def plot_1d_many(df, prefix="", data="data", signal=None, dataset_col="dataset",
             error = "markers"
         else:
             raise RuntimeError(err_msg)
-        if 'ratio_ylim' not in kwargs.keys():
-            kwargs['ratio_ylim'] = [0., 2.]
+        kwargs.setdefault("ratio_ylim", [0., 2.])
+        kwargs.setdefault("ratio_ylabel", "Data / MC")
         plot_ratio(summed_data, summed_sims, x=x_axis,
-                   y=y, yerr=yerr, ax=summary_ax, error=error, ylim=kwargs['ratio_ylim'])
+                   y=y, yerr=yerr, ax=summary_ax, error=error,
+                   ylim=kwargs["ratio_ylim"], ylabel=kwargs["ratio_ylabel"])
+        if other_dset_args:
+            for df, combine, style, label, var_name, other_dset_args in config:
+                if (style == "other_dset_types") and (other_dset_args['plot_ratio'] == True):
+                    error = "both"
+                    dset = other_dset_args['dset_type']
+                    color = dataset_colours[dset] if dset in dataset_colours else dataset_colours
+                    add_error = other_dset_args['add_error']
+                    summed_dset = _merge_datasets(
+                        df, "sum", dataset_col=dataset_col, err_from_sumw2=err_from_sumw2)
+                    plot_ratio(summed_data, summed_dset, x=x_axis,
+                               y=y, yerr=yerr, ax=summary_ax, error=error, zorder=21,
+                               ylim=kwargs["ratio_ylim"], ylabel=kwargs["ratio_ylabel"],
+                               color=color, add_error=add_error)
+                    
+            
     else:
         raise RuntimeError(err_msg)
     return main_ax, summary_ax
@@ -469,14 +485,13 @@ def plot_1d_many(df, prefix="", data="data", signal=None, dataset_col="dataset",
 
 def _merge_datasets(df, style, dataset_col, param_name="_merge_datasets", err_from_sumw2=False):
     if style == "stack":
-        utils.calculate_error(df, do_rel_err=not err_from_sumw2)
         df = utils.stack_datasets(df, dataset_level=dataset_col)
     elif style == "sum":
         df = utils.sum_over_datasets(df, dataset_level=dataset_col)
-        utils.calculate_error(df, do_rel_err=not err_from_sumw2)
     elif style:
         msg = "'{}' must be either 'sum', 'stack' or None. Got {}"
         raise RuntimeError(msg.format(param_name, style))
+    utils.calculate_error(df, do_rel_err=not err_from_sumw2)
     return df
 
 
@@ -528,7 +543,8 @@ def plot_1d(df, kind="line", yscale="lin"):
     return fig
 
 
-def plot_ratio(data, sims, x, y, yerr, ax, error="both", ylim=[0., 2]):
+def plot_ratio(data, sims, x, y, yerr, ax, error="both", ylim=[0., 2],
+               ylabel="Data / MC", color="k", zorder=22, add_error=True):
     # make sure both sides agree with the binning
     merged = data.join(sims, how="left", lsuffix="data", rsuffix="sims")
     data = merged.filter(like="data", axis="columns").fillna(0)
@@ -546,10 +562,11 @@ def plot_ratio(data, sims, x, y, yerr, ax, error="both", ylim=[0., 2]):
         x_axis, ticks, central, lower, upper = values
         mask = (central != 0) & (lower != 0)
         ax.errorbar(x=x_axis[mask], y=central[mask], yerr=(lower[mask], upper[mask]),
-                    fmt="o", markersize=4, color="k")
-        draw(ax, "errorbar", x_axis[mask], ys=["y", "yerr"],
-             y=central[mask], yerr=(lower[mask], upper[mask]),
-             fmt="o", markersize=4, color="k")
+                    fmt="o", markersize=4, color="k", zorder=zorder)
+        if add_error:
+             draw(ax, "errorbar", x_axis[mask], ys=["y", "yerr"],
+                 y=central[mask], yerr=(lower[mask], upper[mask]),
+                 fmt="o", markersize=4, color="gray", zorder=zorder-1)
 
     elif error == "both":
         ratio = d / s
@@ -558,15 +575,16 @@ def plot_ratio(data, sims, x, y, yerr, ax, error="both", ylim=[0., 2]):
 
         draw(ax, "errorbar", x_axis, ys=["y", "yerr"],
              y=ratio, yerr=rel_d_err,
-             fmt="o", markersize=4, color="k")
-        draw(ax, "fill_between", x_axis, ys=["y1", "y2"], color="gray",
-             y2=1 + rel_s_err, y1=1 - rel_s_err, fill_val=1, alpha=0.7)
+             fmt="o", markersize=4, color=color, zorder=zorder)
+        if add_error:
+            draw(ax, "fill_between", x_axis, ys=["y1", "y2"], color="gray",
+                 y2=1 + rel_s_err, y1=1 - rel_s_err, fill_val=1, alpha=0.7, zorder=zorder-1)
 
     ax.set_ylim(ylim)
     ax.grid(True)
     ax.set_axisbelow(True)
     ax.set_xlabel(x)
-    ax.set_ylabel("Data / MC")
+    ax.set_ylabel(ylabel)
 
 
 def convert_intervals(vals):
@@ -587,7 +605,7 @@ def is_intervals(vals):
     return False
 
 
-def draw(ax, method, x, ys, other_dset_type_args={}, **kwargs):
+def draw(ax, method, x, ys, other_dset_args={}, **kwargs):
     fill_val = kwargs.pop("fill_val", 0)
     expected_xs = kwargs.pop("expected_xs", None)
     add_ends = kwargs.pop("add_ends", True)
