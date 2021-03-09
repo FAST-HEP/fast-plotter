@@ -7,13 +7,13 @@ import logging
 import matplotlib
 import math
 import numbers
-import numpy as np
+#import numpy as np
 matplotlib.use('Agg')
 matplotlib.rcParams.update({'figure.autolayout': True})
-from .version import __version__ # noqa
-from .utils import read_binned_df, weighting_vars, binning_vars # noqa
+from .version import __version__  # noqa
+from .utils import read_binned_df, weighting_vars, binning_vars  # noqa
 from .utils import decipher_filename, mask_rows  # noqa
-from .plotting import plot_all, add_annotations, is_intervals # noqa
+from .plotting import plot_all, add_annotations, is_intervals  # noqa
 
 
 logger = logging.getLogger("fast_plotter")
@@ -103,6 +103,7 @@ def process_cfg(cfg_file, args, make_arg_parser=None):
 
     return args
 
+
 def autoscale_values(args, df_filtered, weight, data_rows, mc_rows, ylim_lower=0.1, legend_size=2):
     dims = tuple(dim for dim in binning_vars(df_filtered) if dim != args.dataset_col)
     limits = {}
@@ -118,38 +119,38 @@ def autoscale_values(args, df_filtered, weight, data_rows, mc_rows, ylim_lower=0
                 max_y = max_y if max_y >= 1 else 1
                 if args.yscale == 'log':
                     ylim_upper_floor = math.floor(math.log10(max_y))
-                    y_buffer = legend_size + 2 if ylim_upper_floor > 4 \
-                               else legend_size +1 if ylim_upper_floor > 2 \
-                               else legend_size  #Buffer for legend
+                    y_buffer = (legend_size + 2 if ylim_upper_floor > 4
+                                else legend_size + 1 if ylim_upper_floor > 2
+                                else legend_size)  # Buffer for legend
                     ylim_upper = float('1e'+str(ylim_upper_floor+y_buffer))
                     ylim_lower = 1e-1
                 else:
-                    ylim_upper = round(max_y*1.5, -int(math.floor(math.log10(abs(max_y)))))  #Buffer for legend
+                    ylim_upper = round(max_y*1.5, -int(math.floor(math.log10(abs(max_y)))))  # Buffer for legend
                     ylim_lower = 0
                 ylim = [ylim_lower, ylim_upper]
             else:
                 ylim = args.limits['y'] if 'y' in args.limits else None
             df_aboveMin = df_filtered.loc[df_filtered['sumw'] > ylim_lower]
             xcol = df_aboveMin.index.get_level_values(dim)
-            if 'x' in args.autoscale:  #Determine x-axis limits
-                if is_intervals(xcol):  #If x-axis is interval, take right and leftmost intervals unless they are inf
-                    max_x = xcol.right.max() if np.isfinite(xcol.right.max()) else xcol.left.max()
-                    min_x = xcol.left.min() if np.isfinite(xcol.left.min()) else xcol.right.min()
+            if 'x' in args.autoscale:  # Determine x-axis limits
+                if is_intervals(xcol):  # If x-axis is interval, take right and leftmost intervals unless they are inf
+                    max_x = xcol.right.max() if numpy.isfinite(xcol.right.max()) else xcol.left.max()
+                    min_x = xcol.left.min() if numpy.isfinite(xcol.left.min()) else xcol.right.min()
                     if not np.isfinite(max_x) and hasattr(args, "show_over_underflow") and args.show_over_underflow:
                         logger.warn("Cannot autoscale overflow bin for x-axis. Removing.")
                     xlim = [min_x, max_x]
                 elif isinstance(xcol, numbers.Number):
                     xlim = [xcol.min, xcol.max]
                 else:
-                    xlim = [-0.5, len(xcol.unique()) - 0.5]  #For non-numeric x-axis (e.g. mtn range)
+                    xlim = [-0.5, len(xcol.unique()) - 0.5]  # For non-numeric x-axis (e.g. mtn range)
             else:
                 xlim = args.limits['x'] if 'x' in args.limits else None
 
-            limits[dim]={"x":xlim, "y":ylim}
+            limits[dim] = {"x": xlim, "y": ylim}
     else:
         xlim = args.limits['x'] if 'x' in args.limits else None
         ylim = args.limits['y'] if 'y' in args.limits else None
-        limits  = {dim: {"x": xlim, "y": ylim} for dim in dims}
+        limits = {dim: {"x": xlim, "y":  ylim} for dim in dims}
     return limits
 
 
@@ -167,8 +168,8 @@ def process_one_file(infile, args):
         if weight == "n":
             df_filtered["sumw"] = df_filtered.n
             df_filtered["sumw2"] = df_filtered.n
-            data_rows=None
-            mc_rows=None
+            data_rows = None
+            mc_rows = None
         else:
             data_rows = mask_rows(df_filtered,
                                   regex=args.data,
@@ -208,9 +209,9 @@ def dress_main_plots(plots, annotations=[], yscale=None, ylabel=None, legend={},
 
     autoscale = True if not not autoscale else False
     for properties, (main_ax, summary_ax) in plots.items():
-        projections = [prop[1] for prop in properties if prop[0]=="project"]
-        x_axis = projections[0] if (len(projections)==1) else None
-        dim_limits=limits[x_axis] if x_axis else list(limits.values())[0]
+        projections = [prop[1] for prop in properties if prop[0] == "project"]
+        x_axis = projections[0] if (len(projections) == 1) else None
+        dim_limits = limits[x_axis] if x_axis else list(limits.values())[0]
         add_annotations(annotations, main_ax, summary_ax)
         if yscale:
             main_ax.set_yscale(yscale)
@@ -224,7 +225,7 @@ def dress_main_plots(plots, annotations=[], yscale=None, ylabel=None, legend={},
                 lims = map(float, lims)
                 getattr(main_ax, "set_%slim" % axis)(*lims)
             elif lims.endswith("%"):
-                 main_ax.margins(**{axis: float(lims[:-1])})
+                main_ax.margins(**{axis: float(lims[:-1])})
         if xtickrotation:
             matplotlib.pyplot.xticks(rotation=xtickrotation)
 
