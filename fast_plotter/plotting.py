@@ -475,11 +475,7 @@ def plot_1d_many(df, prefix="", data="data", signal=None, dataset_col="dataset",
                     plot_ratio(summed_data, summed_dset, x=x_axis,
                                y=y, yerr=yerr, ax=summary_ax, error=error, zorder=21,
                                ylim=kwargs["ratio_ylim"], ylabel=kwargs["ratio_ylabel"],
-                               color=color, add_error=add_error)
-                    
-            
-    else:
-        raise RuntimeError(err_msg)
+                               color=color, add_error=add_error)                  
     return main_ax, summary_ax
 
 

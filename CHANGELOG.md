@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.1] - 2020-11-10
+### Fixed
+- Travis deploy to pypi, PR #51
+
+## [0.9.0] - 2020-11-10
+### Added
+- Option to control query engine in postproc, PR #49 [@eshwen](https://github.com/eshwen)
+
+## [0.8.2] - 2020-09-29
+### Fixed
+- Issue with uncertainty band on stacked plots, PR #45
+
 ## [0.8.1] - 2020-06-19
 ### Fixed
 - Allow multiple expansions for KeepSpecificBins in postproc, PR #38
