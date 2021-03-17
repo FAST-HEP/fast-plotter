@@ -124,7 +124,8 @@ def autoscale_values(args, df_filtered, weight, data_rows, mc_rows, ylim_lower=0
                     ylim_upper = float('1e'+str(ylim_upper_floor+y_buffer))
                     ylim_lower = 1e-1
                 else:
-                    ylim_upper = round(max_y*1.5, -int(np.floor(np.log10(abs(max_y)))))  # Buffer for legend
+                    buffer_factor = 1 + 0.5*legend_size
+                    ylim_upper = round(max_y*buffer_factor, -int(np.floor(np.log10(abs(max_y)))))  # Buffer for legend
                     ylim_lower = 0
                 ylim = [ylim_lower, ylim_upper]
             else:
@@ -194,7 +195,7 @@ def process_one_file(infile, args):
             mc_rows = mask_rows(df_filtered,
                                 regex="^((?!"+args.data+").)*$",
                                 level=args.dataset_col)
-        args.limits = autoscale_values(args, df_filtered, weight, data_rows, mc_rows, legend_size)
+        args.limits = autoscale_values(args, df_filtered, weight, data_rows, mc_rows, legend_size = legend_size)
         plots, ok = plot_all(df_filtered, **vars(args))
         ran_ok &= ok
         dress_main_plots(plots, **vars(args))
