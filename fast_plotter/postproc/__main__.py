@@ -2,6 +2,7 @@ import logging
 from . import stages
 from .functions import open_many
 from fast_flow.v1 import read_sequence_yaml
+from fast_flow.help import argparse_help_stages
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
@@ -22,6 +23,12 @@ def make_parser():
     parser.add_argument("-V", "--value-cols", default=r"(.*sumw2?|n)",
                         help="A regular expression to control which columns are"
                         " identified as values and not bin labels")
+    parser.add_argument("--help-stages", metavar="stage-name-regex", nargs="?", default=None,
+                        action=argparse_help_stages(stages.known_stages, "fast_plotter.postproc.stages", full_output=False),
+                        help="Print help specific to the available stages")
+    parser.add_argument("--help-stages-full", metavar="stage",
+                        action=argparse_help_stages(stages.known_stages, "fast_plotter.postproc.stages", full_output=True),
+                        help="Print the full help specific to the available stages")
     parser.add_argument("files", nargs="+",
                         help="Input dataframes that need merging together")
     return parser
