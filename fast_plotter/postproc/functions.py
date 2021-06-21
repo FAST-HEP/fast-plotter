@@ -382,11 +382,11 @@ def assign_dim(df, assignments={}, evals={}, drop_cols=[]):
     return df
 
 
-def merge(dfs):
+def merge(dfs, sort=True):
     """ Merge a list of binned dataframes together
     """
     logger.info("Merging %d dataframes", len(dfs))
-    final_df = pd.concat(dfs, sort=True)  # .fillna(float("-inf"))
+    final_df = pd.concat(dfs, sort=sort)  # .fillna(float("-inf"))
     final_df = final_df.groupby(level=final_df.index.names).sum()  # .replace(float("-inf"), float("nan"))
     return final_df
 
