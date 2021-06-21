@@ -35,11 +35,12 @@ def read_binned_df(filename, **kwargs):
     columns = df.index.names[:]
     df.reset_index(inplace=True)
     dtype = kwargs.pop("dtype", [])
-    for col in df.columns:
+    for col in df.columns:      
         if col in dtype:
             continue
         df[col] = interval_from_string(df[col])
     df.set_index(columns, inplace=True)
+    
     return df
 
 
@@ -78,8 +79,11 @@ def split_df(df, first_values, level=0):
     if not first_values:
         return None, df
     second = df.drop(first_values, level=level)
-    second_values = second.index.unique(level=level)
-    first = df.drop(second_values, level=level)
+    if not second.empty:
+        second_values = second.index.unique(level=level)
+        first = df.drop(second_values, level=level)
+    else:
+        first = df
     if len(first) == 0:
         first = None
     if len(second) == 0:
@@ -95,7 +99,7 @@ def calculate_error(df, sumw2_label="sumw2", err_label="err", inplace=True, do_r
     if not inplace:
         df = df.copy()
     if do_rel_err:
-        root_n = np.sqrt(df["n"])
+        root_n = df["n"].apply(lambda x: np.sqrt(x) if x > 0 else 1.15)
     for column in df:
         if do_rel_err and column.endswith("sumw"):
             err_name = column.replace("sumw", err_label)
@@ -104,7 +108,7 @@ def calculate_error(df, sumw2_label="sumw2", err_label="err", inplace=True, do_r
             df[err_name] = errs
         elif not do_rel_err and sumw2_label in column:
             err_name = column.replace(sumw2_label, err_label)
-            df[err_name] = np.sqrt(df[column])
+            df.loc[:, err_name] = df[column].apply(lambda x: np.sqrt(x) if x > 0 else 1.15)
     if not inplace:
         return df
 

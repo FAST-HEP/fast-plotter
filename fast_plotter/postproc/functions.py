@@ -88,7 +88,6 @@ def rebin(df, axis, mapping, ignore_when_combining=None, rename=None, drop_other
     exploded_map = explode(mapping, len(axis))
     replacements = [(";".join(axis), exploded_map)]
     out_df = handle_one_df(out_df, replacements=replacements)
-
     if drop_others:
         out_df = keep_bins(out_df, axis, set(exploded_map.values()))
 
@@ -224,7 +223,6 @@ def regex_split_dimension(df, axis, regex):
         index[col] = split_index[col]
     df.set_index(pd.MultiIndex.from_frame(index), inplace=True, drop=True)
     return df
-
 
 def rename_cols(df, mapping):
     """Rename one or more value columns"""
@@ -446,7 +444,7 @@ def normalise_group(df, groupby_dimensions, apply_if=None, use_column=None):
     return normed
 
 
-def open_many(file_list, value_columns=r"(.*sumw2?|n)", return_meta=True):
+def open_many(file_list, value_columns=r"(.*sumw2?|/^n$/)", return_meta=True):
     """ Open a list of dataframe files
     """
     dfs = []

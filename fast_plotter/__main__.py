@@ -5,13 +5,16 @@ import os
 import six
 import logging
 import matplotlib
-matplotlib.use('Agg')
+import numpy as np
+import numbers
+matplotlib.use('TkAgg')
 matplotlib.rcParams.update({'figure.autolayout': True})
-from .version import __version__ # noqa
-from .utils import read_binned_df, weighting_vars # noqa
+from .version import __version__  # noqa
+from .utils import read_binned_df, weighting_vars, binning_vars  # noqa
 from .utils import decipher_filename, mask_rows  # noqa
-from .plotting import plot_all, add_annotations # noqa
-
+from .plotting import plot_all, add_annotations, is_intervals  # noqa
+import cProfile
+import re
 
 logger = logging.getLogger("fast_plotter")
 logger.setLevel(logging.INFO)
@@ -70,7 +73,6 @@ def main(args=None):
         ran_ok &= process_one_file(infile, args)
     return 0 if ran_ok else 1
 
-
 def process_cfg(cfg_file, args, make_arg_parser=None):
     if not make_arg_parser:
         make_arg_parser = arg_parser
@@ -100,24 +102,91 @@ def process_cfg(cfg_file, args, make_arg_parser=None):
 
     return args
 
+def autoscale_values(args, df_filtered, weight, data_rows, mc_rows, ylim_lower=0.1, legend_size=2):
+    dims = tuple(dim for dim in binning_vars(df_filtered) if dim != args.dataset_col)
+    limits = {}
+    if hasattr(args, "autoscale"):
+        for dim in dims:
+            if 'y' in args.autoscale:
+                max_mc = df_filtered.loc[mc_rows, 'sumw']
+                if weight == "n":
+                    max_y = df_filtered['sumw'].max()
+                else:
+                    #max_mc = np.ma.log(df_filtered.loc[mc_rows, 'sumw'].max()*args.lumi)
+                    #max_data = np.ma.log(df_filtered.loc[data_rows, 'n'].max() if 'n' in df_filtered.columns else 0.1)
+                    max_mc = df_filtered.loc[mc_rows, 'sumw'].max()*args.lumi
+                    max_data = df_filtered.loc[data_rows, 'n'].max() if 'n' in df_filtered.columns else 0.1
+                    max_y = max(max_mc, max_data)
+                max_y = max_y if max_y >= 1 else 1
+                if args.yscale == 'log':
+                   ylim_upper_floor = int(np.floor(np.log10(max_y)))
+                   y_buffer = (legend_size + 1 if ylim_upper_floor > 4
+                               else legend_size if ylim_upper_floor > 2
+                               else legend_size)  # Buffer for legend
+                   ylim_upper = float('1e'+str(ylim_upper_floor+y_buffer))
+                   ylim_lower = 1e-1
+                else:
+                    buffer_factor = 1 + 0.5*legend_size
+                    ylim_upper = round(max_y*buffer_factor, -int(np.floor(np.log10(abs(max_y)))))  # Buffer for legend
+                ylim = [ylim_lower, ylim_upper]
+                df_aboveMin = df_filtered.loc[df_filtered['sumw'] > ylim_lower/args.lumi]
+            else:
+                if 'limits' in args:
+                    ylim = args.limits['y'] if 'y' in args.limits else None
+                else:
+                    ylim = None
+                df_aboveMin = df_filtered.copy()
+            xcol = df_aboveMin.index.get_level_values(dim)
+            if 'x' in args.autoscale:  # Determine x-axis limits
+                if is_intervals(xcol):  # If x-axis is interval, take right and leftmost intervals unless they are inf
+                    max_x = xcol.right.max() if np.isfinite(xcol.right.max()) else xcol.left.max()
+                    min_x = xcol.left.min() if np.isfinite(xcol.left.min()) else xcol.right.min()
+                    if not np.isfinite(max_x) and hasattr(args, "show_over_underflow") and args.show_over_underflow:
+                        logger.warn("Cannot autoscale overflow bin for x-axis. Removing.")
+                    xlim = [min_x, max_x]
+                elif isinstance(xcol, numbers.Number):
+                    xlim = [xcol.min, xcol.max]
+                else:
+                    xlim = [-0.5, len(xcol.unique()) - 0.5]  # For non-numeric x-axis (e.g. mtn range)
+            else:
+                if 'limits' in args:
+                    xlim = args.limits['x'] if 'x' in args.limits else None
+                else:
+                    xlim = None
+
+            xlim = None if xlim is not None and np.NaN in xlim else xlim
+            ylim = None if ylim is not None and np.NaN in ylim else ylim
+            limits[dim] = {"x": xlim, "y": ylim}
+    else:
+        xlim = args.limits['x'] if 'x' in args.limits else None
+        ylim = args.limits['y'] if 'y' in args.limits else None
+        limits = {dim: {"x": xlim, "y":  ylim} for dim in dims}
+    return limits
+
 
 def process_one_file(infile, args):
     logger.info("Processing: " + infile)
     df = read_binned_df(infile, dtype={args.dataset_col: str})
     weights = weighting_vars(df)
+    legend_size = args.legend_size if hasattr(args, "legend_size") else 2
     ran_ok = True
     for weight in weights:
+        df_filtered = df.copy()
         if args.weights and weight not in args.weights:
             continue
-        df_filtered = df.copy()
         if weight == "n":
             df_filtered["sumw"] = df_filtered.n
             df_filtered["sumw2"] = df_filtered.n
+            data_rows = None
+            mc_rows = None
         else:
+            data_rows = mask_rows(df_filtered,
+                                  regex=args.data,
+                                  level=args.dataset_col)
+            mc_rows = mask_rows(df_filtered,
+                                regex="^((?!"+args.data+").)*$",
+                                level=args.dataset_col)
             if "n" in df.columns:
-                data_rows = mask_rows(df_filtered,
-                                      regex=args.data,
-                                      level=args.dataset_col)
                 for col in df_filtered.columns:
                     if col == "n":
                         continue
@@ -130,29 +199,41 @@ def process_one_file(infile, args):
                     continue
                 df_filtered.rename(replacements, level=column, inplace=True, axis="index")
                 df_filtered = df_filtered.groupby(level=df.index.names).sum()
+            data_rows = mask_rows(df_filtered,
+                                  regex=args.data,
+                                  level=args.dataset_col)
+            mc_rows = mask_rows(df_filtered,
+                                regex="^((?!"+args.data+").)*$",
+                                level=args.dataset_col)
+        args.limits = autoscale_values(args, df_filtered, weight, data_rows, mc_rows, legend_size = legend_size)
         plots, ok = plot_all(df_filtered, **vars(args))
         ran_ok &= ok
         dress_main_plots(plots, **vars(args))
         save_plots(infile, weight, plots, args.outdir, args.extension)
     return ran_ok
 
-
 def dress_main_plots(plots, annotations=[], yscale=None, ylabel=None, legend={},
                      limits={}, xtickrotation=None, **kwargs):
-    for main_ax, summary_ax in plots.values():
-        add_annotations(annotations, main_ax)
+
+    for properties, (main_ax, summary_ax) in plots.items():
+        projections = [prop[1] for prop in properties if prop[0] == "project"]
+        x_axis = projections[0] if (len(projections) == 1) else None
+        dim_limits = limits[x_axis] if x_axis else list(limits.values())[0]
+        add_annotations(annotations, main_ax, summary_ax)
         if yscale:
             main_ax.set_yscale(yscale)
         if ylabel:
             main_ax.set_ylabel(ylabel)
-        main_ax.legend(**legend)
+        main_ax.legend(**legend).set_zorder(20)
         main_ax.grid(True)
         main_ax.set_axisbelow(True)
-        for axis, lims in limits.items():
+        for axis, lims in dim_limits.items():
             if isinstance(lims, (tuple, list)):
                 lims = map(float, lims)
                 if axis.lower() in "xy":
                     getattr(main_ax, "set_%slim" % axis)(*lims)
+            elif lims is None:
+                continue
             elif lims.endswith("%"):
                 main_ax.margins(**{axis: float(lims[:-1])})
         if xtickrotation:
