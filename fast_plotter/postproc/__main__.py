@@ -23,11 +23,11 @@ def make_parser():
     parser.add_argument("-V", "--value-cols", default=r"(.*sumw2?|n)",
                         help="A regular expression to control which columns are"
                         " identified as values and not bin labels")
-    parser.add_argument("--help-stages", metavar="stage-name-regex", nargs="?", default=None,
-                        action=argparse_help_stages(stages.known_stages, "fast_plotter.postproc.stages", full_output=False),
+    parser.add_argument("--help-stages", metavar="stage-name-regex", nargs="?", default=None, full_output=False,
+                        action=argparse_help_stages(stages.known_stages, "fast_plotter.postproc.stages"),
                         help="Print help specific to the available stages")
-    parser.add_argument("--help-stages-full", metavar="stage",
-                        action=argparse_help_stages(stages.known_stages, "fast_plotter.postproc.stages", full_output=True),
+    parser.add_argument("--help-stages-full", metavar="stage", full_output=True,
+                        action=argparse_help_stages(stages.known_stages, "fast_plotter.postproc.stages"),
                         help="Print the full help specific to the available stages")
     parser.add_argument("files", nargs="+",
                         help="Input dataframes that need merging together")
