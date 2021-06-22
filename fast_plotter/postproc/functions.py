@@ -446,7 +446,7 @@ def normalise_group(df, groupby_dimensions, apply_if=None, use_column=None):
     return normed
 
 
-def open_many(file_list, value_columns=r"(.*sumw2?|n)", return_meta=True):
+def open_many(file_list, value_columns=r"(.*sumw2?|^n$)", return_meta=True):
     """ Open a list of dataframe files
     """
     dfs = []
