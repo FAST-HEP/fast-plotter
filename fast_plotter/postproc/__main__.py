@@ -20,7 +20,7 @@ def make_parser():
                         help="A yaml to configure the post-processing step")
     parser.add_argument("-o", "--outdir", default=".",
                         help="The name of the output directory")
-    parser.add_argument("-V", "--value-cols", default=r"(.*sumw2?|/^n$/)",
+    parser.add_argument("-V", "--value-cols", default=r"(.*sumw2?|^n$)",
                         help="A regular expression to control which columns are"
                         " identified as values and not bin labels")
     parser.add_argument("--help-stages", metavar="stage-name-regex", nargs="?", default=None,
