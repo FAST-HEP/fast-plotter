@@ -387,7 +387,7 @@ def merge(dfs, sort=True):
     """
     logger.info("Merging %d dataframes", len(dfs))
     final_df = pd.concat(dfs, sort=sort)  # .fillna(float("-inf"))
-    final_df = final_df.groupby(level=final_df.index.names).sum()  # .replace(float("-inf"), float("nan"))
+    final_df = final_df.groupby(level=final_df.index.names, sort=sort).sum()  # .replace(float("-inf"), float("nan"))
     return final_df
 
 
