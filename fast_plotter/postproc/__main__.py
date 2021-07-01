@@ -43,7 +43,7 @@ def read_processing_cfg(fname, out_dir):
     return sequence
 
 
-def dump_debug_df(dfs, debug_dfs_query=""):
+def debug_df(dfs, debug_dfs_query=""):
     if not debug_dfs_query:
         return dfs[0][0]
 
@@ -54,9 +54,16 @@ def dump_debug_df(dfs, debug_dfs_query=""):
                 return debug_df
         except NameError:
             return None
-
-    logger.debug("No dataframes contain rows matching the debug-dfs-query")
     return None
+
+
+def dump_debug_df(dfs, debug_dfs_query="", debug_rows=5):
+    df = debug_df(dfs, debug_dfs_query)
+    if df is None:
+        logging.debug("No dataframes contain rows matching the debug-dfs-query")
+    else:
+        logging.debug(df.head(debug_rows).to_string())
+    return df
 
 
 def main(args=None):
@@ -65,15 +72,16 @@ def main(args=None):
         logger.setLevel(logging.DEBUG)
 
     dfs = open_many(args.files, value_columns=args.value_cols)
+    if args.debug_dfs:
+        dump_debug_df(dfs, args.debug_dfs_query, args.debug_rows)
+
     sequence = read_processing_cfg(args.post_process, args.outdir)
 
     for stage in sequence:
         logger.info("Working on %d dataframes", len(dfs))
         dfs = stage(dfs)
         if args.debug_dfs:
-            debug_df = dump_debug_df(dfs, args.debug_dfs_query)
-            if debug_df is not None:
-                logger.debug(debug_df.head(args.debug_rows).to_string())
+            dump_debug_df(dfs, args.debug_dfs_query, args.debug_rows)
 
 
 if __name__ == "__main__":
