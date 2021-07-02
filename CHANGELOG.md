@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.10.3] - 2021-07-02
+### Fixed
+- Postproc: Fix merge's sort option, add CLI logging controls, PR #62, [@DBAnthony](https://github.com/DBAnthony)
+
 ## [0.10.2] - 2021-06-24
 ### Fixed
 - Postproc: Fix default value for value_cols on command line, PR #60, [@DBAnthony](https://github.com/DBAnthony)
