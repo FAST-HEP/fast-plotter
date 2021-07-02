@@ -6,7 +6,7 @@ import pandas as pd
 from .query_curator import prepare_datasets_scale_factor, make_dataset_map
 import logging
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.NOTSET)
 
 
 class BinningDimCombiner():
