@@ -166,3 +166,6 @@ class WriteOut(BaseManipulator):
     func = "write_out"
     use_outdir = True
     give_meta = True
+
+
+known_stages = BaseManipulator.__subclasses__()

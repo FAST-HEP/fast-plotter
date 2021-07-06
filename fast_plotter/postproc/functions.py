@@ -6,7 +6,7 @@ import pandas as pd
 from .query_curator import prepare_datasets_scale_factor, make_dataset_map
 import logging
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.NOTSET)
 
 
 class BinningDimCombiner():
@@ -380,12 +380,12 @@ def assign_dim(df, assignments={}, evals={}, drop_cols=[]):
     return df
 
 
-def merge(dfs):
+def merge(dfs, sort=True):
     """ Merge a list of binned dataframes together
     """
     logger.info("Merging %d dataframes", len(dfs))
-    final_df = pd.concat(dfs, sort=True)  # .fillna(float("-inf"))
-    final_df = final_df.groupby(level=final_df.index.names).sum()  # .replace(float("-inf"), float("nan"))
+    final_df = pd.concat(dfs, sort=sort)  # .fillna(float("-inf"))
+    final_df = final_df.groupby(level=final_df.index.names, sort=sort).sum()  # .replace(float("-inf"), float("nan"))
     return final_df
 
 
@@ -444,7 +444,7 @@ def normalise_group(df, groupby_dimensions, apply_if=None, use_column=None):
     return normed
 
 
-def open_many(file_list, value_columns=r"(.*sumw2?|/^n$/)", return_meta=True):
+def open_many(file_list, value_columns=r"(.*sumw2?|^n$)", return_meta=True):
     """ Open a list of dataframe files
     """
     dfs = []
