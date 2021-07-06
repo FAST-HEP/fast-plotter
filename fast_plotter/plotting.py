@@ -6,6 +6,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.colors as mc
 import logging
+import re
 logger = logging.getLogger(__name__)
 
 
@@ -422,9 +423,41 @@ def _merge_datasets(df, style, dataset_col, param_name="_merge_datasets", err_fr
     utils.calculate_error(df, do_rel_err=not err_from_sumw2)
     return df
 
+def annotate_lines(cfg, main_ax, summary_ax):
+    linename = list(cfg.keys())[0]
+    annotDict = cfg[linename]
+    if 'values' not in annotDict.keys():
+        raise(RuntimeError("Must provide values for line placement."))
+    annotDefaults = {"style": "-", "alpha": 1, "width": 1.5,
+                     "colour": 'k', "label": None, "vmin": 0,
+                     "vmax": 1, "zorder": 10, "axes": ["main"]}
+    annotDict.update({key: value for key, value in annotDefaults.items()
+                      if key not in annotDict.keys()})
+    lineKeys = ['values', 'style', 'alpha', 'width', 'colour', 'label', 'vmin', 'vmax', 'zorder', 'axes']
+    if set(annotDict.keys()).difference(set(lineKeys)):
+        logger.warn("Invalid parameter(s) given to line annotations. Options are {}".format(lineKeys))
+    values, style, alpha, width, colour, label, vmin, vmax, zorder, axes = [annotDict[key] for key in lineKeys]
+    for axis in axes:
+        awidth = 0.6 * width if (axis == 'summary') else width
+        ax = main_ax if (str(axis) == 'main') else summary_ax if (str(axis) == 'summary') else None
+        if ax is None:
+            logger.warn("Axis must exist and either be 'main' or 'summary'. {} is None".format(axis))
+            continue
+        for value in values:
+            value = float(value)
+            if 'hline' in linename:
+                ax.axhline(value, vmin, vmax, color=colour, label=label,
+                           alpha=alpha, ls=style, lw=awidth, zorder=zorder)
+            if 'vline' in linename:
+                ax.axvline(value, vmin, vmax, color=colour, label=label,
+                           alpha=alpha, ls=style, lw=awidth, zorder=zorder)
 
-def add_annotations(annotations, ax):
+
+def add_annotations(annotations, ax, summary_ax=None):
     for cfg in annotations:
+        if list(filter(lambda key: re.match("(.*hline.*|.*vline.*)", key), cfg.keys())):
+            annotate_lines(cfg, ax, summary_ax)
+            continue
         cfg = cfg.copy()
         s = cfg.pop("text")
         xy = cfg.pop("position")
