@@ -120,7 +120,7 @@ class FillColl(object):
         self.line = line
         self.linewidth = linewidth
         self.other_dset_args = other_dset_args
-        self.dataset_colours=dataset_colours
+        self.dataset_colours = dataset_colours
 
     def pre_call(self, column):
         ax = self.ax
@@ -142,15 +142,11 @@ class FillColl(object):
                 if self.other_dset_args:
                     style = self.other_dset_args['style']
                     label = col.name if self.other_dset_args['add_label'] else None
-                    color = self.other_dset_args['colour'] if self.other_dset_args['colour'] and type(self.other_dset_args['colour']) != dict\
+                    color = self.other_dset_args['colour'] if self.other_dset_args['colour']\
                             else self.dataset_colours[col.name] if col.name in self.dataset_colours.keys()\
                             else color
-                    self.color=color
-                    if type(color) == dict:
-                        logger.warn(f"You didn't specify a colour for dataset '{col.name}'," +
-                                    f" and dataset was not found in 'dataset_colours', with keys {color.keys()}."
-                                    + " Using black.")
-                        color = "k"
+                    self.color = color
+                    self.other_dset_args['colour'] = color
                     width = self.linewidth
                 else:
                     style = "-"
@@ -235,11 +231,6 @@ def actually_plot(df, x_axis, y, yerr, kind, label, ax, dataset_col="dataset",
                 if not re.compile(regex).match(dset):
                     continue
                 color = filler.color
-                if type(color) == dict:
-                   logger.warn(f"You didn't specify a colour for dataset '{dset}'," +
-                               f" and dataset was not found in 'dataset_colours', with keys {color.keys()}."
-                               + " Using black.")
-                   color = "k"
                 dset_df = df.reset_index().loc[df.reset_index()[dataset_col] == dset].reset_index()
                 x = dset_df[x_axis]
                 draw(ax, "fill_between", x, ys=["y1", "y2"], y1=dset_df.eval("sumw+sqrt(sumw2)"),
@@ -476,8 +467,6 @@ def plot_1d_many(df, prefix="", data="data", signal=None, dataset_col="dataset",
                     error = "both"
                     dset = other_dset_args['dset_type']
                     color = dataset_colours[dset] if dset in dataset_colours else other_dset_args['colour']
-                    if type(color) == dict:
-                       raise ValueError(f"Please specify a color for dataset '{dset}'. Datasets specified are {dataset_colours.keys()}")
                     add_error = other_dset_args['add_error']
                     summed_dset = _merge_datasets(
                         df, "sum", dataset_col=dataset_col, err_from_sumw2=err_from_sumw2)
