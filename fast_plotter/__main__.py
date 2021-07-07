@@ -103,6 +103,7 @@ def process_cfg(cfg_file, args, make_arg_parser=None):
 
     return args
 
+
 def autoscale_values(args, df_filtered, weight, data_rows, mc_rows, ylim_lower=0.1, legend_size=2):
     if hasattr(args, "autoscale"):
         if len(df_filtered.index.names) > 2:
@@ -119,12 +120,12 @@ def autoscale_values(args, df_filtered, weight, data_rows, mc_rows, ylim_lower=0
                     max_y = max(max_mc, max_data)
                 max_y = max_y if max_y >= 1 else 1
                 if args.yscale == 'log':
-                   ylim_upper_floor = int(np.floor(np.log10(max_y)))
-                   y_buffer = (legend_size + 1 if ylim_upper_floor > 3
-                               else legend_size if ylim_upper_floor > 2
-                               else legend_size)  # Buffer for legend
-                   ylim_upper = float('1e'+str(ylim_upper_floor+y_buffer))
-                   ylim_lower = 1e-1
+                    ylim_upper_floor = int(np.floor(np.log10(max_y)))
+                    y_buffer = (legend_size + 1 if ylim_upper_floor > 3
+                                else legend_size if ylim_upper_floor > 2
+                                else legend_size)  # Buffer for legend
+                    ylim_upper = float('1e'+str(ylim_upper_floor+y_buffer))
+                    ylim_lower = 1e-1
                 else:
                     buffer_factor = 1 + 0.5*legend_size
                     ylim_upper = round(max_y*buffer_factor, -int(np.floor(np.log10(abs(max_y)))))  # Buffer for legend
@@ -199,7 +200,7 @@ def process_one_file(infile, args):
                             level=args.dataset_col)
         plots, ok = plot_all(df_filtered, **vars(args))
         ran_ok &= ok
-        args.limits = autoscale_values(args, df_filtered, weight, data_rows, mc_rows, legend_size = legend_size)
+        args.limits = autoscale_values(args, df_filtered, weight, data_rows, mc_rows, legend_size=legend_size)
         dress_main_plots(plots, **vars(args))
         save_plots(infile, weight, plots, args.outdir, args.extension)
     return ran_ok
