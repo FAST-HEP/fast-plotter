@@ -7,7 +7,6 @@ import logging
 import matplotlib
 import numpy as np
 import numbers
-import pandas as pd
 matplotlib.use('Agg')
 matplotlib.rcParams.update({'figure.autolayout': True})
 from .version import __version__ # noqa
@@ -110,7 +109,6 @@ def autoscale_values(args, df_filtered, weight, data_rows, mc_rows, ylim_lower=0
             logger.warn("Autoscaling not supported for multi-index dataframes")
             limits = args.limits
         else:
-            xcol = df_filtered.index.get_level_values(1)
             if 'y' in args.autoscale:
                 if weight == "n":
                     max_y = df_filtered['sumw'].max()
@@ -137,6 +135,7 @@ def autoscale_values(args, df_filtered, weight, data_rows, mc_rows, ylim_lower=0
                 else:
                     ylim = None
                 df_aboveMin = df_filtered.copy()
+            xcol = df_aboveMin.index.get_level_values(1)
             if 'x' in args.autoscale:  # Determine x-axis limits
                 if is_intervals(xcol):  # If x-axis is interval, take right and leftmost intervals unless they are inf
                     max_x = xcol.right.max() if np.isfinite(xcol.right.max()) else xcol.left.max()
