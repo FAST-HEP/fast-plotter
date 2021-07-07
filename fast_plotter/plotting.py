@@ -143,8 +143,8 @@ class FillColl(object):
                     style = self.other_dset_args['style']
                     label = col.name if self.other_dset_args['add_label'] else None
                     color = self.other_dset_args['colour'] if self.other_dset_args['colour']\
-                            else self.dataset_colours[col.name] if col.name in self.dataset_colours.keys()\
-                            else color
+                        else self.dataset_colours[col.name] if col.name in self.dataset_colours.keys()\
+                        else color
                     self.color = color
                     self.other_dset_args['colour'] = color
                     width = self.linewidth
@@ -152,7 +152,7 @@ class FillColl(object):
                     style = "-"
                     label = None
                     color = "k"
-                    width = self.linewidth 
+                    width = self.linewidth
             else:
                 color = None
                 label = col.name
