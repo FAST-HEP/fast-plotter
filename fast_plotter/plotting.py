@@ -423,6 +423,7 @@ def _merge_datasets(df, style, dataset_col, param_name="_merge_datasets", err_fr
     utils.calculate_error(df, do_rel_err=not err_from_sumw2)
     return df
 
+
 def annotate_lines(cfg, main_ax, summary_ax):
     linename = list(cfg.keys())[0]
     annotDict = cfg[linename]
