@@ -102,13 +102,12 @@ def calculate_error(df, sumw2_label="sumw2", err_label="err", inplace=True, do_r
             errs = np.true_divide(df[column], root_n)
             errs.loc[~np.isfinite(errs)] = np.nan
             df[err_name] = errs
-        elif not do_rel_err and sumw2_label in column:
+        else:
+        #elif not do_rel_err and sumw2_label in column:
             err_name = column.replace(sumw2_label, err_label)
             df[err_name] = np.sqrt(df[column])
-    if is_null_poissonian:
-        print(err_name)
-        print(df.loc[df[err_name]<=0])
-        df[err_name] = df[err_name].apply(lambda x: x if x > 0 else 1.15)
+        if is_null_poissonian:
+            df[err_name] = df[err_name].apply(lambda x: x if x > 1.15 else np.sqrt(1.15**2+x**2))
     if not inplace:
         return df
 
