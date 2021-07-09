@@ -103,11 +103,17 @@ def process_cfg(cfg_file, args, make_arg_parser=None):
     return args
 
 
-def autoscale_values(args, df_filtered, weight, data_rows, mc_rows, ylim_lower=0.1, legend_size=2):
+def autoscale_values(args, df_filtered, weight, ylim_lower=0.1, legend_size=2):
     if hasattr(args, "autoscale"):
+        data_rows = mask_rows(df_filtered,
+                              regex=args.data,
+                              level=args.dataset_col)
+        mc_rows = mask_rows(df_filtered,
+                            regex="^((?!"+args.data+").)*$",
+                            level=args.dataset_col)
         if len(df_filtered.index.names) > 2:
             logger.warn("Autoscaling not supported for multi-index dataframes")
-            limits = args.limits
+            limits = args.limits if 'limits' in args else {}
         else:
             if 'y' in args.autoscale:
                 if weight == "n":
@@ -176,13 +182,13 @@ def process_one_file(infile, args):
             df_filtered["sumw2"] = df_filtered.n
         else:
             if "n" in df.columns:
-                data_rows_ungrouped = mask_rows(df_filtered,
-                                                regex=args.data,
-                                                level=args.dataset_col)
+                data_rows = mask_rows(df_filtered,
+                                      regex=args.data,
+                                      level=args.dataset_col)
                 for col in df_filtered.columns:
                     if col == "n":
                         continue
-                    df_filtered.loc[data_rows_ungrouped, col] = df["n"][data_rows_ungrouped]
+                    df_filtered.loc[data_rows, col] = df["n"][data_rows]
             df_filtered.columns = [
                 n.replace(weight + ":", "") for n in df_filtered.columns]
         if hasattr(args, "value_replacements"):
@@ -191,15 +197,9 @@ def process_one_file(infile, args):
                     continue
                 df_filtered.rename(replacements, level=column, inplace=True, axis="index")
                 df_filtered = df_filtered.groupby(level=df.index.names).sum()
-        data_rows = mask_rows(df_filtered,
-                              regex=args.data,
-                              level=args.dataset_col)
-        mc_rows = mask_rows(df_filtered,
-                            regex="^((?!"+args.data+").)*$",
-                            level=args.dataset_col)
         plots, ok = plot_all(df_filtered, **vars(args))
         ran_ok &= ok
-        args.limits = autoscale_values(args, df_filtered, weight, data_rows, mc_rows, legend_size=legend_size)
+        args.limits = autoscale_values(args, df_filtered, weight, legend_size=legend_size)
         dress_main_plots(plots, **vars(args))
         save_plots(infile, weight, plots, args.outdir, args.extension)
     return ran_ok
