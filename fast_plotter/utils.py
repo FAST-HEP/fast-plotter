@@ -91,7 +91,7 @@ def split_data_sims(df, data_labels=["data"], dataset_level="dataset"):
     return split_df(df, first_values=data_labels, level=dataset_level)
 
 
-def calculate_error(df, sumw2_label="sumw2", err_label="err", inplace=True, do_rel_err=True):
+def calculate_error(df, sumw2_label="sumw2", err_label="err", inplace=True, do_rel_err=True, is_null_poissonian=False):
     if not inplace:
         df = df.copy()
     if do_rel_err:
@@ -105,6 +105,10 @@ def calculate_error(df, sumw2_label="sumw2", err_label="err", inplace=True, do_r
         elif not do_rel_err and sumw2_label in column:
             err_name = column.replace(sumw2_label, err_label)
             df[err_name] = np.sqrt(df[column])
+    if is_null_poissonian:
+        print(err_name)
+        print(df.loc[df[err_name]<=0])
+        df[err_name] = df[err_name].apply(lambda x: x if x > 0 else 1.15)
     if not inplace:
         return df
 
