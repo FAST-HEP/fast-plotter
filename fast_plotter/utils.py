@@ -106,7 +106,6 @@ def calculate_error(df, sumw2_label="sumw2", err_label="err", inplace=True, do_r
             err_name = column.replace(sumw2_label, err_label)
             df[err_name] = np.sqrt(df[column])
         else:
-            err_name = ""
             continue
         if is_null_poissonian:
             df[err_name] = df[err_name].apply(lambda x: x if x > 1.15 else np.sqrt(1.15**2+x**2))
