@@ -146,7 +146,7 @@ class FillColl(object):
                         else self.dataset_colours[col.name] if col.name in self.dataset_colours.keys()\
                         else color
                     self.color = color
-                    self.other_dset_args['colour'] = color
+                    self.other_dset_args['tmp_colour'] = color
                     width = self.linewidth
                 else:
                     style = "-"
@@ -466,7 +466,9 @@ def plot_1d_many(df, prefix="", data="data", signal=None, dataset_col="dataset",
                 if (style == "other_dset_types") and (other_dset_args['plot_ratio']):
                     error = "both"
                     dset = other_dset_args['dset_type']
-                    color = dataset_colours[dset] if dset in dataset_colours else other_dset_args['colour']
+                    color = dataset_colours[dset] if dset in dataset_colours\
+                            else other_dset_args['colour'] if other_dset_args['colour']
+                            else other_dset_args['tmp_colour']
                     add_error = other_dset_args['add_error']
                     summed_dset = _merge_datasets(
                         df, "sum", dataset_col=dataset_col, err_from_sumw2=err_from_sumw2)
