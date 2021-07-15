@@ -4,9 +4,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.10.4] - 2021-07-15
+### Added
+- Postproc: Control error calculation method and switch default for datacard inputs, PR #68, [@DBAnthony](https://github.com/DBAnthony)
+
+
 ## [0.10.3] - 2021-07-02
 ### Fixed
-- Postproc: Fix merge's sort option, add CLI logging controls, PR #62, [@DBAnthony](https://github.com/DBAnthony)
+- Postproc: Fix merge's sort option, add CLI logging controls, PR #62
 
 ## [0.10.2] - 2021-06-24
 ### Fixed
