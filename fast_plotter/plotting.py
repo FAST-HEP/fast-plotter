@@ -467,7 +467,7 @@ def plot_1d_many(df, prefix="", data="data", signal=None, dataset_col="dataset",
                     error = "both"
                     dset = other_dset_args['dset_type']
                     color = dataset_colours[dset] if dset in dataset_colours\
-                            else other_dset_args['colour'] if other_dset_args['colour']
+                            else other_dset_args['colour'] if other_dset_args['colour']\
                             else other_dset_args['tmp_colour']
                     add_error = other_dset_args['add_error']
                     summed_dset = _merge_datasets(
