@@ -201,7 +201,7 @@ def actually_plot(df, x_axis, y, yerr, kind, label, ax, dataset_col="dataset",
         y_down = (summed[y] - summed[yerr]).values
         y_up = (summed[y] + summed[yerr]).values
         draw(ax, "fill_between", x, ys=["y1", "y2"], y2=y_down, y1=y_up,
-             color="gray", alpha=0.7, expected_xs=expected_xs)
+             color="gray", alpha=0.7, expected_xs=expected_xs, label="MC stat.")
     else:
         raise RuntimeError("Unknown value for 'kind', '{}'".format(kind))
 
