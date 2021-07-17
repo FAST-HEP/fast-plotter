@@ -374,10 +374,12 @@ def plot_1d_many(df, prefix="", data="data", signal=None, dataset_col="dataset",
               (in_df_data, plot_data, kind_data, data_legend, "plot_data"),
               (in_df_signal, plot_signal, kind_signal, "Signal", "plot_signal"),
               ]
+    kwargs.setdefault("is_null_poissonian", False)
     for df, combine, style, label, var_name in config:
         if df is None or len(df) == 0:
             continue
-        merged = _merge_datasets(df, combine, dataset_col, param_name=var_name, err_from_sumw2=err_from_sumw2)
+        merged = _merge_datasets(df, combine, dataset_col, param_name=var_name, err_from_sumw2=err_from_sumw2,
+                                 is_null_poissonian=kwargs['is_null_poissonian'])
         actually_plot(merged, x_axis=x_axis, y=y, yerr=yerr, kind=style,
                       label=label, ax=main_ax, dataset_col=dataset_col,
                       dataset_colours=dataset_colours,
@@ -392,9 +394,11 @@ def plot_1d_many(df, prefix="", data="data", signal=None, dataset_col="dataset",
     if summary.startswith("ratio"):
         main_ax.set_xlabel("")
         summed_data = _merge_datasets(
-            in_df_data, "sum", dataset_col=dataset_col, err_from_sumw2=err_from_sumw2)
+            in_df_data, "sum", dataset_col=dataset_col, err_from_sumw2=err_from_sumw2,
+            is_null_poissonian=kwargs['is_null_poissonian'])
         summed_sims = _merge_datasets(
-            in_df_sims, "sum", dataset_col=dataset_col, err_from_sumw2=err_from_sumw2)
+            in_df_sims, "sum", dataset_col=dataset_col, err_from_sumw2=err_from_sumw2,
+            is_null_poissonian=kwargs['is_null_poissonian'])
         if summary == "ratio-error-both":
             error = "both"
         elif summary == "ratio-error-markers":
@@ -411,7 +415,8 @@ def plot_1d_many(df, prefix="", data="data", signal=None, dataset_col="dataset",
     return main_ax, summary_ax
 
 
-def _merge_datasets(df, style, dataset_col, param_name="_merge_datasets", err_from_sumw2=False):
+def _merge_datasets(df, style, dataset_col, param_name="_merge_datasets", err_from_sumw2=False,
+                    is_null_poissonian=False):
     if style == "stack":
         df = utils.stack_datasets(df, dataset_level=dataset_col)
     elif style == "sum":
@@ -419,7 +424,7 @@ def _merge_datasets(df, style, dataset_col, param_name="_merge_datasets", err_fr
     elif style:
         msg = "'{}' must be either 'sum', 'stack' or None. Got {}"
         raise RuntimeError(msg.format(param_name, style))
-    utils.calculate_error(df, do_rel_err=not err_from_sumw2)
+    utils.calculate_error(df, do_rel_err=not err_from_sumw2, is_null_poissonian=is_null_poissonian)
     return df
 
 
