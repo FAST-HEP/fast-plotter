@@ -208,12 +208,12 @@ def process_one_file(infile, args):
 def dress_main_plots(plots, annotations=[], yscale=None, ylabel=None, legend={},
                      limits={}, xtickrotation=None, **kwargs):
     for main_ax, summary_ax in plots.values():
-        add_annotations(annotations, main_ax)
+        add_annotations(annotations, main_ax, summary_ax)
         if yscale:
             main_ax.set_yscale(yscale)
         if ylabel:
             main_ax.set_ylabel(ylabel)
-        main_ax.legend(**legend)
+        main_ax.legend(**legend).set_zorder(20)
         main_ax.grid(True)
         main_ax.set_axisbelow(True)
         for axis, lims in limits.items():
