@@ -222,7 +222,7 @@ def dress_main_plots(plots, annotations=[], yscale=None, ylabel=None, legend={},
                 if axis.lower() in "xy":
                     getattr(main_ax, "set_%slim" % axis)(*lims)
             elif lims is None:
-                continue        
+                continue
             elif lims.endswith("%"):
                 main_ax.margins(**{axis: float(lims[:-1])})
         if xtickrotation:
