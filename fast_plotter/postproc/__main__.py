@@ -86,9 +86,17 @@ def main(args=None):
 
     sequence = read_processing_cfg(args.post_process, args.outdir)
 
+    apply_if = lambda df, stage: eval(str(stage.apply_if))
+
     for stage in sequence:
         logger.info("Working on %d dataframes", len(dfs))
-        dfs = stage(dfs)
+        if stage.apply_if:
+            apply_to = [apply_if(df[0], stage) for df in dfs]
+            if not all(apply_to):
+                logger.info(f"Skipping stage '{stage.name}' for invalid dataframes")
+                dfs = [stage(df) if apply_to[idx] else df for idx, df in enumerate(dfs)]
+        else:
+            dfs = stage(dfs)
         if debug:
             dump_debug_df(dfs, args.debug_dfs_query, args.debug_rows)
 

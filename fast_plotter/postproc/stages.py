@@ -22,6 +22,11 @@ class BaseManipulator():
         self.kwargs = kwargs
         self.func = getattr(functions, self.func)
         self.doc = self.func.__doc__
+        if "apply_if" in kwargs:
+            self.apply_if = kwargs['apply_if']
+            kwargs.pop("apply_if", None)
+        else:
+            self.apply_if = False
 
     def __call__(self, dfs):
         if self.cardinality == "many-to-one":
