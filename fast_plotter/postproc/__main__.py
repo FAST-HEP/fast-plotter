@@ -86,7 +86,8 @@ def main(args=None):
 
     sequence = read_processing_cfg(args.post_process, args.outdir)
 
-    eval_apply_if = lambda df, stage: eval(str(stage.apply_if))
+    def eval_apply_if(df, stage):
+        return eval(str(stage.apply_if))
 
     for stage in sequence:
         logger.info("Working on %d dataframes", len(dfs))
