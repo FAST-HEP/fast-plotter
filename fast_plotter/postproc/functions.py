@@ -319,7 +319,7 @@ def stack_weights(df, drop_n_col=False):
     return out
 
 
-def to_datacard_inputs(df, select_data, rename_syst_vars=False):
+def to_datacard_inputs(df, select_data, rename_syst_vars=False, error_from_n=False):
     """
     Convert to a long-form dataframe suitable as input to fast-datacard
     """
@@ -330,7 +330,10 @@ def to_datacard_inputs(df, select_data, rename_syst_vars=False):
     data_mask = df.eval(select_data)
     df["content"] = df.n
     df["content"][~data_mask] = df.sumw
-    df["error"] = df.content / np.sqrt(df.n)
+    if error_from_n:
+        df["error"] = df.content / np.sqrt(df.n)
+    else:
+        df["error"] = np.sqrt(df.sumw2)
     df.drop(["n", "sumw", "sumw2"], inplace=True, axis="columns")
     return df
 
