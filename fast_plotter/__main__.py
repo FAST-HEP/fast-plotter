@@ -97,7 +97,6 @@ def process_cfg(cfg_file, args, make_arg_parser=None):
             if isinstance(value, six.string_types):
                 return Template(value).safe_substitute(replacements)
             return value
-
         replacements = dict(args.variables)
         args = Namespace(**recursive_replace(vars(args), replacements))
 
@@ -174,7 +173,6 @@ def process_one_file(infile, args):
     weights = weighting_vars(df)
     legend_size = args.legend_size if hasattr(args, "legend_size") else 2
     ran_ok = True
-    print(vars(args))
     for weight in weights:
         if args.weights and weight not in args.weights:
             continue
@@ -230,7 +228,6 @@ def dress_main_plots(plots, annotations=[], yscale=None, ylabel=None, legend={},
             elif lims.endswith("%"):
                 main_ax.margins(**{axis: float(lims[:-1])})
         if annotate_xlabel:
-            print(met_cats)
             x_ticks = [i for i in range(len(met_cats))]
             main_ax.set_xticks(x_ticks)
             main_ax.set_xticklabels(met_cats)
