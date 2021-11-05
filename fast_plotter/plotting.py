@@ -9,7 +9,6 @@ import logging
 import re
 logger = logging.getLogger(__name__)
 
-
 def change_brightness(color, amount):
     if amount is None:
         return
@@ -23,20 +22,64 @@ def change_brightness(color, amount):
     c = colorsys.rgb_to_hls(*color)
     return colorsys.hls_to_rgb(c[0], 1 - amount * (1 - c[1]), c[2])
 
+def annotate_xlabel_vals(df, ax, regex="(?P<category>.*?(?=\s))\s(?P<multi1>\d.*?(?=\d))(?P<multi2>.*?(?=,\s)),\s(?P<MET>.*)"):
+    df=df.reset_index()
+    met_cats=[re.compile(regex).match(str(category.replace("$","").replace("\infty","$\infty$"))).groups()[3:][0] for category in df['category'].unique()]
+    cats=[re.compile(regex).match(str(category.replace("$","").replace("\infty","$\infty$"))).groups()[:3] for category in df['category'].unique()]
+    n_cats = len(cats)
+    for i, cat in enumerate(cats):
+        if i==0:
+            a1,a2,a3=cat
+            old_cat = cat
+            labels = {i:{0:{val.replace(" ",""):0}} for i,val in enumerate(cat)}
+        else:
+           for j, val in enumerate(cat):
+               val = val.replace(" ", "")
+               if old_cat[j].replace(" ","") == val:
+                   continue
+               else:
+                  labels[j][i]={val:0}
+               if j == len(cat)-1:
+                  old_cat=cat
+    for depth, label in labels.items():
+        for i, split in enumerate(label):
+            label_str = list(label[split].keys())[0]
+            if i == len(label) - 1:
+                label_length = len(cats) - split
+            else:
+                label_length = dict(enumerate(label))[i+1] - split
+            labels[depth][split][label_str]=label_length
+    label_positions = {}
+    for depth, label in labels.items():
+        label_positions[depth] = {}
+        for left_edge, len_dict in label.items():
+            label_str = list(len_dict.keys())[0]
+            position = left_edge + (len_dict[label_str]/2)
+            if label_str in label_positions[depth]:
+                label_positions[depth][label_str].append(position-0.5) 
+            else:
+                label_positions[depth][label_str] = [position-0.5]
 
+    for depth, label_dict in label_positions.items():
+        y = (0.80 - 0.05*(depth + 1))
+        for label, xvals in label_dict.items():
+            for x in xvals:
+                x = (x+0.5)/n_cats
+                ax.text(x, y, label, fontsize=12-depth, transform=ax.transAxes, ha='center', weight='medium')
+    return met_cats
+    
 def plot_all(df, project_1d=True, project_2d=True, data="data", signal=None, dataset_col="dataset",
              yscale="log", lumi=None, annotations=[], dataset_order=None,
              continue_errors=True, bin_variable_replacements={}, colourmap="nipy_spectral",
-             figsize=None, other_dset_types={}, **kwargs):
+             figsize=None, other_dset_types={}, grid='both', **kwargs):
     figures = {}
-
     dimensions = utils.binning_vars(df)
     ran_ok = True
 
     if len(dimensions) == 1:
         df = utils.rename_index(df, bin_variable_replacements)
         figures[(("yscale", yscale),)] = plot_1d(
-            df, yscale=yscale, annotations=annotations)
+            df, yscale=yscale, annotations=annotations, grid=grid)
 
     if dataset_col in dimensions:
         dimensions = tuple(dim for dim in dimensions if dim != dataset_col)
@@ -54,7 +97,7 @@ def plot_all(df, project_1d=True, project_2d=True, data="data", signal=None, dat
                 plot = plot_1d_many(projected, data=data, signal=signal,
                                     dataset_col=dataset_col, scale_sims=lumi,
                                     colourmap=colourmap, dataset_order=dataset_order,
-                                    figsize=figsize, other_dset_args=other_dset_types, **kwargs
+                                    figsize=figsize, other_dset_args=other_dset_types, grid=grid, **kwargs
                                     )
                 figures[(("project", dim), ("yscale", yscale))] = plot
             except Exception as e:
@@ -177,7 +220,7 @@ class BarColl(FillColl):
 
 def actually_plot(df, x_axis, y, yerr, kind, label, ax, dataset_col="dataset",
                   dataset_colours=None, colourmap="nipy_spectral",
-                  dataset_order=None, other_cfg_args={}):
+                  dataset_order=None, other_cfg_args={}, grid='both'):
     expected_xs = df.index.unique(x_axis).values
     if kind == "scatter":
         draw(ax, "errorbar", x=df.reset_index()[x_axis], ys=["y", "yerr"], y=df[y], yerr=df[yerr],
@@ -363,7 +406,7 @@ def plot_1d_many(df, prefix="", data="data", signal=None, dataset_col="dataset",
                  kind_data="scatter", kind_sims="fill-error-last", kind_signal="line",
                  scale_sims=None, summary="ratio-error-both", colourmap="nipy_spectral",
                  dataset_order=None, figsize=(5, 6), show_over_underflow=False,
-                 dataset_colours=None, err_from_sumw2=False, data_legend="Data", other_dset_args={}, **kwargs):
+                 dataset_colours=None, err_from_sumw2=False, data_legend="Data", other_dset_args={}, grid='both', **kwargs):
     y = "sumw"
     yvar = "sumw2"
     yerr = "err"
@@ -439,7 +482,7 @@ def plot_1d_many(df, prefix="", data="data", signal=None, dataset_col="dataset",
         actually_plot(merged, x_axis=x_axis, y=y, yerr=yerr, kind=style,
                       label=label, ax=main_ax, dataset_col=dataset_col,
                       dataset_colours=dataset_colours,
-                      colourmap=colourmap, dataset_order=dataset_order, other_cfg_args=other_cfg_args)
+                      colourmap=colourmap, dataset_order=dataset_order, other_cfg_args=other_cfg_args, grid=grid)
     main_ax.set_xlabel(x_axis)
 
     if not summary:
@@ -541,18 +584,17 @@ def add_annotations(annotations, ax, summary_ax=None):
         cfg.setdefault("xycoords", "axes fraction")
         ax.annotate(s, xy=xy, **cfg)
 
-
-def plot_1d(df, kind="line", yscale="lin"):
+def plot_1d(df, kind="line", yscale="lin", grid='both'):
     fig, ax = plt.subplots(1)
     df["sumw"].plot(kind=kind)
     ax.set_axisbelow(True)
-    plt.grid(True)
+    plt.grid(axis=grid)
     plt.yscale(yscale)
     return fig
 
 
 def plot_ratio(data, sims, x, y, yerr, ax, error="both", ylim=[0., 2], ylabel="Data / MC",
-               color="k", zorder=22, add_error=True):
+               color="k", zorder=22, add_error=True, grid='both'):
     # make sure both sides agree with the binning
     merged = data.join(sims, how="left", lsuffix="data", rsuffix="sims")
     data = merged.filter(like="data", axis="columns").fillna(0)
@@ -589,7 +631,7 @@ def plot_ratio(data, sims, x, y, yerr, ax, error="both", ylim=[0., 2], ylabel="D
                  y2=1 + rel_s_err, y1=1 - rel_s_err, fill_val=1, alpha=0.7, zorder=zorder-1)
 
     ax.set_ylim(ylim)
-    ax.grid(True)
+    ax.grid(axis=grid)
     ax.set_axisbelow(True)
     ax.set_xlabel(x)
     ax.set_ylabel(ylabel)

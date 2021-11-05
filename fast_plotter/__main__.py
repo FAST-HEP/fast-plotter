@@ -12,7 +12,7 @@ matplotlib.rcParams.update({'figure.autolayout': True})
 from .version import __version__ # noqa
 from .utils import read_binned_df, weighting_vars, binning_vars # noqa
 from .utils import decipher_filename, mask_rows  # noqa
-from .plotting import plot_all, add_annotations, is_intervals # noqa
+from .plotting import plot_all, add_annotations, is_intervals, annotate_xlabel_vals # noqa
 
 
 logger = logging.getLogger("fast_plotter")
@@ -46,6 +46,7 @@ def arg_parser(args=None):
                         help="Scale the MC yields by this lumi")
     parser.add_argument("-y", "--yscale", default="log", choices=["log", "linear"],
                         help="Use this scale for the y-axis")
+    parser.add_argument("-a", "--annotate_xlabel", action="store_true", help="Split x-axis information onto plot")
     parser.add_argument('--version', action='version', version='%(prog)s ' + __version__)
 
     def split_equals(arg):
@@ -173,6 +174,7 @@ def process_one_file(infile, args):
     weights = weighting_vars(df)
     legend_size = args.legend_size if hasattr(args, "legend_size") else 2
     ran_ok = True
+    print(vars(args))
     for weight in weights:
         if args.weights and weight not in args.weights:
             continue
@@ -200,21 +202,23 @@ def process_one_file(infile, args):
         plots, ok = plot_all(df_filtered, **vars(args))
         ran_ok &= ok
         args.limits = autoscale_values(args, df_filtered, weight, legend_size=legend_size)
-        dress_main_plots(plots, **vars(args))
+        dress_main_plots(plots, **vars(args), df=df_filtered)
         save_plots(infile, weight, plots, args.outdir, args.extension)
     return ran_ok
 
 
 def dress_main_plots(plots, annotations=[], yscale=None, ylabel=None, legend={},
-                     limits={}, xtickrotation=None, **kwargs):
+                     limits={}, xtickrotation=None, df=None, annotate_xlabel=False, grid='both', **kwargs):
     for main_ax, summary_ax in plots.values():
         add_annotations(annotations, main_ax, summary_ax)
+        if annotate_xlabel:
+            met_cats=annotate_xlabel_vals(df, main_ax)
         if yscale:
             main_ax.set_yscale(yscale)
         if ylabel:
             main_ax.set_ylabel(ylabel)
         main_ax.legend(**legend).set_zorder(20)
-        main_ax.grid(True)
+        main_ax.grid(axis=grid)
         main_ax.set_axisbelow(True)
         for axis, lims in limits.items():
             if isinstance(lims, (tuple, list)):
@@ -225,6 +229,11 @@ def dress_main_plots(plots, annotations=[], yscale=None, ylabel=None, legend={},
                 continue
             elif lims.endswith("%"):
                 main_ax.margins(**{axis: float(lims[:-1])})
+        if annotate_xlabel:
+            print(met_cats)
+            x_ticks = [i for i in range(len(met_cats))]
+            main_ax.set_xticks(x_ticks)
+            main_ax.set_xticklabels(met_cats)
         if xtickrotation:
             matplotlib.pyplot.xticks(rotation=xtickrotation)
 
