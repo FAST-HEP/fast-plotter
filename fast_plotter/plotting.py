@@ -507,7 +507,7 @@ def plot_1d_many(df, prefix="", data="data", signal=None, dataset_col="dataset",
         kwargs.setdefault("ratio_ylim", [0., 2.])
         kwargs.setdefault("ratio_ylabel", "Data / MC")
         plot_ratio(summed_data, summed_sims, x=x_axis,
-                   y=y, yerr=yerr, ax=summary_ax, error=error,
+                   y=y, yerr=yerr, ax=summary_ax, error=error, grid=grid,
                    ylim=kwargs["ratio_ylim"], ylabel=kwargs["ratio_ylabel"])
         if other_dset_args:
             for df, combine, style, label, var_name, other_dset_args in config:
@@ -523,7 +523,7 @@ def plot_1d_many(df, prefix="", data="data", signal=None, dataset_col="dataset",
                     if summed_data is not None:
                         plot_ratio(summed_data, summed_dset, x=x_axis,
                                    y=y, yerr=yerr, ax=summary_ax, error=error, zorder=21,
-                                   ylim=kwargs["ratio_ylim"], ylabel=kwargs["ratio_ylabel"],
+                                   ylim=kwargs["ratio_ylim"], ylabel=kwargs["ratio_ylabel"], grid=grid,
                                    color=color, add_error=add_error)
     else:
         raise RuntimeError(err_msg)
