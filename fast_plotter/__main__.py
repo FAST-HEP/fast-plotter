@@ -103,8 +103,9 @@ def process_cfg(cfg_file, args, make_arg_parser=None):
     return args
 
 
-def autoscale_values(args, df_filtered, weight, ylim_lower=0.1, legend_size=2):
+def autoscale_values(args, df_filtered, weight, ylim_lower=0.5, legend_size=2):
     if hasattr(args, "autoscale"):
+        legend_size = int(legend_size)
         data_rows = mask_rows(df_filtered,
                               regex=args.data,
                               level=args.dataset_col)
@@ -129,7 +130,6 @@ def autoscale_values(args, df_filtered, weight, ylim_lower=0.1, legend_size=2):
                                 else legend_size if ylim_upper_floor > 2
                                 else legend_size)  # Buffer for legend
                     ylim_upper = float('1e'+str(ylim_upper_floor+y_buffer))
-                    ylim_lower = 1e-1
                 else:
                     buffer_factor = 1 + 0.5*legend_size
                     ylim_upper = round(max_y*buffer_factor, -int(np.floor(np.log10(abs(max_y)))))  # Buffer for legend
@@ -255,4 +255,4 @@ def save_plots(infile, weight, plots, outdir, extensions):
 
 
 if __name__ == "__main__":
-    main()
+    main()                                 
