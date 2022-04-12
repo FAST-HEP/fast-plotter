@@ -38,6 +38,8 @@ def annotate_xlabel_vals(df, ax, regex="(?P<category>.*?(?=\s))\s(?P<multi1>\d.*
            for j, val in enumerate(cat):
                val = val.strip()
                if old_cat[j].strip() == val:
+                   if j == len(cat)-1:
+                      old_cat=cat
                    continue
                else:
                   labels[j][i]={val:0}
@@ -58,7 +60,7 @@ def annotate_xlabel_vals(df, ax, regex="(?P<category>.*?(?=\s))\s(?P<multi1>\d.*
             label_str = list(len_dict.keys())[0]
             position = left_edge + (len_dict[label_str]/2)
             if label_str in label_positions[depth]:
-                label_positions[depth][label_str].append(position-0.5) 
+                label_positions[depth][label_str].append(position-0.5)
             else:
                 label_positions[depth][label_str] = [position-0.5]
 
@@ -69,7 +71,7 @@ def annotate_xlabel_vals(df, ax, regex="(?P<category>.*?(?=\s))\s(?P<multi1>\d.*
                 x = (x+0.5)/n_cats
                 ax.text(x, y, label, fontsize=12-depth, transform=ax.transAxes, ha='center', weight='medium')
     return met_cats
-    
+
 def plot_all(df, project_1d=True, project_2d=True, data="data", signal=None, dataset_col="dataset",
              yscale="log", lumi=None, annotations=[], dataset_order=None,
              continue_errors=True, bin_variable_replacements={}, colourmap="nipy_spectral",
@@ -681,4 +683,5 @@ def draw(ax, method, x, ys, **kwargs):
     if ticks is not None:
         ax.set_xticks(x)
         ax.set_xticklabels(ticks)
-    return x, ticks
+    return x, ticks                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   
+~                                           
