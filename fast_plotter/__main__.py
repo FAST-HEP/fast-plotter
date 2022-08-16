@@ -203,7 +203,6 @@ def process_one_file(infile, args):
         plots, ok = plot_all(df_filtered, **vars(args))
         ran_ok &= ok
         args.limits = autoscale_values(args, df_filtered, weight, legend_size=legend_size)
-        print(args.limits)
         dress_main_plots(plots, **vars(args), df=df_filtered)
         save_plots(infile, weight, plots, args.outdir, args.extension)
     return ran_ok
