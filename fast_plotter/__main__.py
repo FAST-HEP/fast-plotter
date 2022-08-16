@@ -140,7 +140,10 @@ def autoscale_values(args, df_filtered, weight, ylim_lower=0.5, legend_size=2):
                     ylim = args.limits['y'] if 'y' in args.limits else None
                 else:
                     ylim = None
-                df_aboveMin = df_filtered.copy()
+                if 'x' in args.autoscale:
+                    df_aboveMin = df_filtered.loc[df_filtered['sumw'] > ylim_lower/args.lumi]
+                else:
+                    df_aboveMin = df_filtered.copy()
             xcol = df_aboveMin.index.get_level_values(1)
             if 'x' in args.autoscale:  # Determine x-axis limits
                 if is_intervals(xcol):  # If x-axis is interval, take right and leftmost intervals unless they are inf
@@ -200,6 +203,7 @@ def process_one_file(infile, args):
         plots, ok = plot_all(df_filtered, **vars(args))
         ran_ok &= ok
         args.limits = autoscale_values(args, df_filtered, weight, legend_size=legend_size)
+        print(args.limits)
         dress_main_plots(plots, **vars(args), df=df_filtered)
         save_plots(infile, weight, plots, args.outdir, args.extension)
     return ran_ok
@@ -215,6 +219,7 @@ def dress_main_plots(plots, annotations=[], yscale=None, ylabel=None, legend={},
             main_ax.set_yscale(yscale)
         if ylabel:
             main_ax.set_ylabel(ylabel)
+        legend['ncol'] = int(legend['ncol'])
         main_ax.legend(**legend).set_zorder(20)
         main_ax.grid(axis=grid)
         main_ax.set_axisbelow(True)
@@ -255,4 +260,4 @@ def save_plots(infile, weight, plots, outdir, extensions):
 
 
 if __name__ == "__main__":
-    main()                                 
+    main()

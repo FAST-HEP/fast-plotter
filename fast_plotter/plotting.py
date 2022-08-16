@@ -22,12 +22,14 @@ def change_brightness(color, amount):
     c = colorsys.rgb_to_hls(*color)
     return colorsys.hls_to_rgb(c[0], 1 - amount * (1 - c[1]), c[2])
 
-def annotate_xlabel_vals(df, ax, regex="(?P<category>.*?(?=\s))\s(?P<multi1>\d.*?(?=\d))(?P<multi2>.*?(?=,\s)),\s(?P<MET>.*)", backup_regex="(?P<category>.*?(?=\,))(?P<dummy>()),\s(?P<MET>.*)"):
+#def annotate_xlabel_vals(df, ax, binning_col='category', regex="(?P<category>.*?(?=\s))\s(?P<multi1>\d.*?(?=\d))(?P<multi2>.*?(?=,\s)),\s(?P<MET>.*)", backup_regex="(?P<category>.*?(?=\,))(?P<dummy>()),\s(?P<MET>.*)"):
+#def annotate_xlabel_vals(df, ax, binning_col='category', regex="(?P<year>.*?(?=,\s)),\s(?P<category>.*?(?=,\s))(?P<dummy>()),\s(?P<MET>.*)", backup_regex="(?P<category>.*?(?=\,))(?P<dummy>()),\s(?P<MET>.*)"):
+def annotate_xlabel_vals(df, ax, binning_col='region', regex="(?P<year>.*?(?=,\s)),\s(?P<category>.*?(?=,\s))(?P<dummy>()),\s(?P<MET>.*)", backup_regex="(?P<category>.*?(?=\,))(?P<dummy>()),\s(?P<MET>.*)"):
     df=df.reset_index()
     re_compiler = lambda category,regex: re.compile(regex).match(str(category.replace("$","").replace("\infty","$\infty$")))
     compile_correct_regex = lambda category: (re_compiler(category,regex) if re_compiler(category,regex) is not None else re_compiler(category,backup_regex)).groups()
-    met_cats=[compile_correct_regex(category)[3:][0] for category in df['category'].unique()]
-    cats=[compile_correct_regex(category)[:3] for category in df['category'].unique()]
+    met_cats=[compile_correct_regex(category)[3:][-1] for category in df[binning_col].unique()]
+    cats=[compile_correct_regex(category)[:3] for category in df[binning_col].unique()]
     n_cats = len(cats)
     for i, cat in enumerate(cats):
         if i==0:
@@ -60,18 +62,19 @@ def annotate_xlabel_vals(df, ax, regex="(?P<category>.*?(?=\s))\s(?P<multi1>\d.*
             label_str = list(len_dict.keys())[0]
             position = left_edge + (len_dict[label_str]/2)
             if label_str in label_positions[depth]:
-                label_positions[depth][label_str].append(position-0.5)
+                label_positions[depth][label_str].append(position-0.5) 
             else:
                 label_positions[depth][label_str] = [position-0.5]
 
     for depth, label_dict in label_positions.items():
-        y = (0.80 - 0.05*(depth + 1))
+        #y = (0.80 - 0.05*(depth + 1))
+        y = (0.95 - 0.05*(depth + 1))
         for label, xvals in label_dict.items():
             for x in xvals:
                 x = (x+0.5)/n_cats
                 ax.text(x, y, label, fontsize=12-depth, transform=ax.transAxes, ha='center', weight='medium')
     return met_cats
-
+    
 def plot_all(df, project_1d=True, project_2d=True, data="data", signal=None, dataset_col="dataset",
              yscale="log", lumi=None, annotations=[], dataset_order=None,
              continue_errors=True, bin_variable_replacements={}, colourmap="nipy_spectral",
@@ -201,7 +204,7 @@ class FillColl(object):
                     color = "k"
                     width = self.linewidth
             else:
-                color = None
+                color = color
                 label = col.name
                 width = 2
                 style = "--"
@@ -683,4 +686,4 @@ def draw(ax, method, x, ys, **kwargs):
     if ticks is not None:
         ax.set_xticks(x)
         ax.set_xticklabels(ticks)
-    return x, ticks                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   
+    return x, ticks
