@@ -22,7 +22,7 @@ def change_brightness(color, amount):
     c = colorsys.rgb_to_hls(*color)
     return colorsys.hls_to_rgb(c[0], 1 - amount * (1 - c[1]), c[2])
 
-def annotate_xlabel_vals(df, ax, binning_col='region', regex="(?P<category>.*?(?=\s))\s(?P<multi1>\d.*?(?=\d))(?P<multi2>.*?(?=,\s)),\s(?P<MET>.*)", backup_regex="(?P<category>.*?(?=\,))(?P<dummy>()),\s(?P<MET>.*)"):
+def annotate_xlabel_vals(df, ax, binning_col='category', regex="(?P<category>.*?(?=\s))\s(?P<multi1>\d.*?(?=\d))(?P<multi2>.*?(?=,\s)),\s(?P<MET>.*)", backup_regex="(?P<category>.*?(?=\,))(?P<dummy>()),\s(?P<MET>.*)"):
     df=df.reset_index()
     re_compiler = lambda category,regex: re.compile(regex).match(str(category.replace("$","").replace("\infty","$\infty$")))
     compile_correct_regex = lambda category: (re_compiler(category,regex) if re_compiler(category,regex) is not None else re_compiler(category,backup_regex)).groups()
