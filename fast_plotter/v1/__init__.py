@@ -1,3 +1,4 @@
+""" Features for version 1 """
 from typing import Any, Dict, List
 import uproot
 
