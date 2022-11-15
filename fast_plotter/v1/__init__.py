@@ -51,6 +51,7 @@ def make_plots(plot_config: Dict[str, Any], input_files: List[str], output_dir: 
         style = named_styles[config.pop("style")]
         collection = create_collection(name, config, style)
         sources = config.pop("sources")
+        colors = []
         for source in sources:
             label = source.pop("label")
             path = source.pop("path")
@@ -60,6 +61,7 @@ def make_plots(plot_config: Dict[str, Any], input_files: List[str], output_dir: 
                 numerator=hist.members["fPassedHistogram"].to_numpy()[0],
                 denominator=hist.members["fTotalHistogram"].to_numpy()[0],
             )
-
+            colors.append(source.pop("color"))
+        collection.hist_colors = colors
         collection.plot()
         collection.save(output_dir)
