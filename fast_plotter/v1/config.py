@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 from omegaconf import OmegaConf
-from typing import Any, Optional
+from typing import Any
 import json
 
 from fasthep_logging import get_logger
@@ -10,60 +10,72 @@ logger = get_logger()
 
 @dataclass
 class LabelConfig:
-    x_label: str = "x"
-    y_label: str = "y"
-    title: str = "title"
-    show_title: bool = True
+    xlabel: str = field(default="x")
+    ylabel: str = field(default="y")
+    title: str = field(default="title")
+    show_title: bool = field(default=True)
     kwargs: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
 class LegendConfig:
-    show: bool = True
-    legend_loc: str = "best"
-    legend_ncol: int = 1
-    legend_fontsize: int = 12
+    show: bool = field(default=True)
+    title: str = field(default="title")
+    show_title: bool = field(default=False)
+    legend_loc: str = field(default="best")
+    legend_ncol: int = field(default=1)
+    legend_fontsize: int = field(default=12)
     kwargs: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
 class GridOverlayConfig():
-    show: bool = True
-    linestyle: str = "dashed-5-5"
-    linewidth: float = 1
-    alpha: float = 0.5
-    color: str = "grey"
+    show: bool = field(default=True)
+    linestyle: str = field(default="dashed-5-5")
+    linewidth: float = field(default=1)
+    alpha: float = field(default=0.5)
+    color: str = field(default="grey")
     vertical_lines: list[float] = field(default_factory=list)
     horizontal_lines: list[float] = field(default_factory=list)
-    ylimits: tuple[float, float] = (0, 1)
-    xlimits: tuple[float, float] = (0, 1)
+    ylimits: tuple[float, float] = field(default=(0, 1))
+    xlimits: tuple[float, float] = field(default=(0, 1))
     kwargs: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
 class CanvasConfig:
-    width: int = 1920
-    height: int = 1080
-    dpi: int = 300
+    width: int = field(default=1920)
+    height: int = field(default=1080)
+    dpi: int = field(default=300)
     kwargs: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
 class SourceConfig:
-    path: str = ""
-    label: str = ""
-    color: str = "black"
+    path: str = field(default="")
+    label: str = field(default="")
+    color: str = field(default="black")
+    protocol: str = field(default="root")
+
+
+@dataclass
+class AxesConfig:
+    xlog: bool = field(default=False)
+    ylog: bool = field(default=False)
+    xlimits: tuple[float, float] = field(default=(0, 1))
+    ylimits: tuple[float, float] = field(default=(0, 1))
+    kwargs: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
 class CollectionConfig:
-    style: str = "default"
-    type: str = "efficiency"
-    source_type: str = "root"
-    labels: LabelConfig = field(default_factory=LabelConfig)
-    legend: LegendConfig = field(default_factory=LegendConfig)
-    grid_overlay: GridOverlayConfig = field(default_factory=GridOverlayConfig)
-    canvas: CanvasConfig = field(default_factory=CanvasConfig)
+    style: str = field(default="default")
+    type: str = field(default="efficiency")
+    labels: Optional[LabelConfig] = field(default_factory=LabelConfig)
+    legend: Optional[LegendConfig] = field(default_factory=LegendConfig)
+    grid_overlay: Optional[GridOverlayConfig] = field(default_factory=GridOverlayConfig)
+    canvas: Optional[CanvasConfig] = field(default_factory=CanvasConfig)
+    axes: Optional[AxesConfig] = field(default_factory=AxesConfig)
     plugins: dict[str, Any] = field(default_factory=dict)
 
 
@@ -72,26 +84,39 @@ class StylesConfig:
     """ StylesConfig sets defaults for CollectionConfig.
     A style can be used by more than one CollectionConfig.
     """
-    legend: LegendConfig = field(default_factory=LegendConfig)
-    labels: LabelConfig = field(default_factory=LabelConfig)
+    legend: Optional[LegendConfig] = field(default_factory=LegendConfig)
+    labels: Optional[LabelConfig] = field(default_factory=LabelConfig)
     grid_overlay: Optional[GridOverlayConfig] = field(default_factory=GridOverlayConfig)
-    canvas: CanvasConfig = field(default_factory=CanvasConfig)
-    plugins: dict[str, Any] = field(default_factory=dict)
+    canvas: Optional[CanvasConfig] = field(default_factory=CanvasConfig)
+    axes: Optional[AxesConfig] = field(default_factory=AxesConfig)
+    plugins: Optional[dict[str, Any]] = field(default_factory=dict)
 
 
 def apply_style_to_collection(collection: CollectionConfig, style: StylesConfig) -> None:
+    default_config = OmegaConf.structured(StylesConfig)
+    temp = None
     for attribute in ["legend", "labels", "grid_overlay", "canvas", "plugins"]:
-        logger.info(f"Applying style {attribute} to collection {collection}")
-        logger.info(f"Collection {attribute} before: {getattr(collection, attribute)}")
+        logger.debug(f"Applying style {attribute} to collection {collection}")
+        in_collection = hasattr(collection, attribute)
+        in_style = hasattr(style, attribute)
 
-        temp = OmegaConf.merge(getattr(collection, attribute), getattr(style, attribute))
-        logger.info(f"Collection {attribute} after: {temp}")
+        if not in_collection and not in_style:
+            setattr(collection, attribute, getattr(default_config, attribute))
+            return
+
+        to_merge = [getattr(default_config, attribute)]
+        if in_collection:
+            to_merge.append(getattr(collection, attribute))
+        if in_style:
+            to_merge.append(getattr(style, attribute))
+        temp = OmegaConf.merge(*to_merge)
+
         setattr(collection, attribute, temp)
 
 
 @dataclass
 class PlotConfig:
-    plotconfig_version: str = "1"
+    plotconfig_version: str = field(default="1")
     styles: dict[str, StylesConfig] = field(default_factory=dict)
     collections: dict[str, CollectionConfig] = field(default_factory=dict)
 
