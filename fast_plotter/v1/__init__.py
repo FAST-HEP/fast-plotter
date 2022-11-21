@@ -45,13 +45,10 @@ def make_plots(plot_config_file: str, input_files: List[str], output_dir: str):
 
     styles = plot_config.pop("styles", {})
     collections = plot_config.pop("collections", {})
-    named_styles = {}
-    for style in styles:
-        named_styles[style["name"]] = style
 
     for name, config in collections.items():
         # TODO: needs to me safer
-        style = named_styles[config.pop("style")]
+        style = styles[config.pop("style")]
         collection = create_collection(name, config, style)
         sources = config.pop("sources")
         colors = []
