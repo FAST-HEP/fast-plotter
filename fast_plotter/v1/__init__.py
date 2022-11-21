@@ -3,6 +3,7 @@ from typing import Any, Dict, List
 import uproot
 
 from .hist_collections import EfficiencyHistCollection
+from .settings import LabelSettings, LegendSettings, GridSettings, TickSettings
 
 
 def create_collection(name, config, style):

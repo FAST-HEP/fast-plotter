@@ -1,4 +1,3 @@
-from .plot import draw_legend
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 from dataclasses import field
@@ -11,10 +10,13 @@ import mplhep as hep
 import matplotlib
 matplotlib.use("Agg")
 
+from .plot import draw_legend, set_lables, set_grid, set_ticks
+from .settings import LabelSettings, LegendSettings, GridSettings, TickSettings
 
 class EfficiencyHistCollection():
     hists: list[Any] = field(default_factory=list)
     hist_colors: list[str] = field(default_factory=list)
+    histtype = "errorbar"
 
     def __init__(self, name, title, style):
         self.name = name
@@ -30,7 +32,7 @@ class EfficiencyHistCollection():
         # hep_style = self.style["plugins"]["mplhep"]["style"]
         fig, ax = plt.subplots()
         hep.style.use("CMS")
-        hep.cms.label(data=False)
+        hep.cms.label(data=False, fontsize=14, lumi="13 TeV")
         # plt.title(self.title)
 
         plots = [hist.eff for hist in self.hists]
@@ -43,22 +45,42 @@ class EfficiencyHistCollection():
             yerr=yerrs,
             xerr=True,
             label=labels,
-            histtype="errorbar",
+            histtype=self.histtype,
             capsize=2,
             color=self.hist_colors,
             **kwargs,
         )
-        draw_legend(ax)
-        plt.xlabel("$p_{T}$ [GeV]")
-        plt.ylabel("Efficiency")
-        # ax.grid(which='major', color='black', linestyle='-', linewidth=2)
-        ax.tick_params(which='major', length=10, width=1, direction='in')
+        legend_settings = LegendSettings()
+        draw_legend(ax, legend_settings)
+        label_settings = LabelSettings(
+            x_label="p_{T} [GeV]",
+            y_label="Efficiency",
+            title=self.title,
+        )
+        set_lables(ax, label_settings)
+        # plt.xlabel("$p_{T}$ [GeV]")
+        # plt.ylabel("Efficiency")
+        # ax.tick_params(which='major', length=10, width=1, direction='in')
+        # ax.tick_params(which='minor', length=5, width=1, direction='in')
+        #xmin, xmax = ax.get_xlim()
+        xmin, xmax = 0, 40
+        ymin, ymax = 0, 1.1
 
-        plt.vlines(x=[10, 20, 30], color='grey', linestyle='dashed', linewidth=2, ymin=0, ymax=1)
-        plt.hlines(y=[0.25, 0.5, 0.75, 0.95, 1], color='grey', linestyle='dashed', xmin=0, xmax=30, linewidth=2)
+        plt.xlim(xmin, xmax)
+        plt.ylim(ymin, ymax)
+        grid_settings = GridSettings(
+            vertical_lines=[10, 20, 30, 40],
+            horizontal_lines=[0.25, 0.5, 0.75, 0.95, 1],
+            xlimits=(xmin, xmax),
+            ylimits=(ymin, 1),
+        )
+        set_grid(ax, grid_settings)
+        plt.tight_layout()
+
 
     def save(self, output_dir):
         output_file = os.path.join(output_dir, f"{self.name}.png")
+        plt.rcParams['savefig.dpi'] = 300
         print(f"Saving {output_file}")
         plt.savefig(output_file)
 
