@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 from matplotlib import container
 
-from .settings import LegendSettings
+from .settings import LegendSettings, LabelSettings, GridSettings, TickSettings
 
 
 def draw_legend(axis: plt.Axes, settings: LegendSettings) -> None:
@@ -19,7 +19,26 @@ def set_lables(axis: plt.Axes, labels: LabelSettings) -> None:
     axis.set_title(labels.title)
 
 def set_grid(axis: plt.Axes, grid: GridSettings) -> None:
-    pass
+    axis.vlines(
+        grid.vertical_lines,
+        color=grid.color,
+        linestyle=grid.linestyle,
+        linewidth=grid.linewidth,
+        ymin=grid.ylimits[0],
+        ymax=grid.ylimits[1],
+        alpha=grid.alpha,
+        **grid.kwargs,
+    )
+    axis.hlines(
+        grid.horizontal_lines,
+        color=grid.color,
+        linestyle=grid.linestyle,
+        xmin=grid.xlimits[0],
+        xmax=grid.xlimits[1],
+        linewidth=grid.linewidth,
+        alpha=grid.alpha,
+        **grid.kwargs,
+    )
 
 def set_ticks(axis: plt.Axes, ticks: TickSettings) -> None:
     pass
