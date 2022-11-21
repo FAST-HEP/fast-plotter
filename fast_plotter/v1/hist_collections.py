@@ -12,7 +12,7 @@ matplotlib.use("Agg")
 
 from .plot import draw_legend, set_lables, set_grid, set_ticks
 from .settings import LabelSettings, LegendSettings, GridSettings, TickSettings
-from .plugins._matplotlib import savefig
+from .plugins._matplotlib import savefig, setup_matplotlib
 
 class EfficiencyHistCollection():
     hists: list[Any] = field(default_factory=list)
@@ -30,11 +30,10 @@ class EfficiencyHistCollection():
         self.hists.append(Efficiency(name, numerator, denominator, **kwargs))
 
     def plot(self, **kwargs):
-        # hep_style = self.style["plugins"]["mplhep"]["style"]
+        setup_matplotlib()
         fig, ax = plt.subplots()
         hep.style.use("CMS")
-        hep.cms.label(data=False, fontsize=14, lumi="13 TeV")
-        # plt.title(self.title)
+        hep.cms.label(data=False, fontsize=14)
 
         plots = [hist.eff for hist in self.hists]
         labels = [hist.name for hist in self.hists]
@@ -81,9 +80,8 @@ class EfficiencyHistCollection():
 
     def save(self, output_dir):
         output_file = os.path.join(output_dir, f"{self.name}.png")
-        savefig(output_file)
         print(f"Saving {output_file}")
-        plt.savefig(output_file)
+        savefig(output_file)
 
 
 class Efficiency:
