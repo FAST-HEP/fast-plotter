@@ -12,6 +12,7 @@ matplotlib.use("Agg")
 
 from .plot import draw_legend, set_lables, set_grid, set_ticks
 from .settings import LabelSettings, LegendSettings, GridSettings, TickSettings
+from .plugins._matplotlib import savefig
 
 class EfficiencyHistCollection():
     hists: list[Any] = field(default_factory=list)
@@ -80,7 +81,7 @@ class EfficiencyHistCollection():
 
     def save(self, output_dir):
         output_file = os.path.join(output_dir, f"{self.name}.png")
-        plt.rcParams['savefig.dpi'] = 300
+        savefig(output_file)
         print(f"Saving {output_file}")
         plt.savefig(output_file)
 
