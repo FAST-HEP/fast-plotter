@@ -5,6 +5,7 @@ import uproot
 from .hist_collections import EfficiencyHistCollection
 from .settings import LabelSettings, LegendSettings, GridSettings, TickSettings
 
+from .config import load_config, PlotConfig
 
 def create_collection(name, config, style):
     LOOKUP = {
@@ -36,11 +37,12 @@ def read_histogram_file(input_file, histname):
     return hist
 
 
-def make_plots(plot_config: Dict[str, Any], input_files: List[str], output_dir: str):
+def make_plots(plot_config_file: str, input_files: List[str], output_dir: str):
     _workaround_uproot_issue38()
+
+    plot_config = load_config(plot_config_file)
     input_file = input_files[0]
 
-    plotter_version = plot_config.pop("plotter-version", "0")
     styles = plot_config.pop("styles", {})
     collections = plot_config.pop("collections", {})
     named_styles = {}

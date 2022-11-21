@@ -32,6 +32,7 @@ requires-python = ">=3.8"
 dependencies = [
     "fast-curator",
     "fast-flow",
+    "fast-logging",
     "hist",
     "matplotlib >=3.0",
     "mplhep >=0.2.16",
