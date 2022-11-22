@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
+import numpy as np
 from omegaconf import OmegaConf
 from typing import Any
-import json
 
 from fasthep_logging import get_logger
 
@@ -37,8 +37,8 @@ class GridOverlayConfig():
     color: str = field(default="grey")
     vertical_lines: list[float] = field(default_factory=list)
     horizontal_lines: list[float] = field(default_factory=list)
-    ylimits: tuple[float, float] = field(default=(0, 1))
-    xlimits: tuple[float, float] = field(default=(0, 1))
+    ylimits: tuple[float, float] = field(default=(-np.inf, np.inf))
+    xlimits: tuple[float, float] = field(default=(-np.inf, np.inf))
     kwargs: dict[str, Any] = field(default_factory=dict)
 
 
@@ -62,8 +62,10 @@ class SourceConfig:
 class AxesConfig:
     xlog: bool = field(default=False)
     ylog: bool = field(default=False)
-    xlimits: tuple[float, float] = field(default=(0, 1))
-    ylimits: tuple[float, float] = field(default=(0, 1))
+    xlimits: tuple[float, float] = field(default=(-np.inf, np.inf))
+    ylimits: tuple[float, float] = field(default=(-np.inf, np.inf))
+    major_ticks: int = field(default=5)
+    minor_ticks: int = field(default=5)
     kwargs: dict[str, Any] = field(default_factory=dict)
 
 
@@ -71,11 +73,11 @@ class AxesConfig:
 class CollectionConfig:
     style: str = field(default="default")
     type: str = field(default="efficiency")
-    labels: Optional[LabelConfig] = field(default_factory=LabelConfig)
-    legend: Optional[LegendConfig] = field(default_factory=LegendConfig)
-    grid_overlay: Optional[GridOverlayConfig] = field(default_factory=GridOverlayConfig)
-    canvas: Optional[CanvasConfig] = field(default_factory=CanvasConfig)
-    axes: Optional[AxesConfig] = field(default_factory=AxesConfig)
+    labels: LabelConfig = field(default_factory=LabelConfig)
+    legend: LegendConfig = field(default_factory=LegendConfig)
+    grid_overlay: GridOverlayConfig = field(default_factory=GridOverlayConfig)
+    canvas: CanvasConfig = field(default_factory=CanvasConfig)
+    axes: AxesConfig = field(default_factory=AxesConfig)
     plugins: dict[str, Any] = field(default_factory=dict)
 
 
@@ -84,12 +86,12 @@ class StylesConfig:
     """ StylesConfig sets defaults for CollectionConfig.
     A style can be used by more than one CollectionConfig.
     """
-    legend: Optional[LegendConfig] = field(default_factory=LegendConfig)
-    labels: Optional[LabelConfig] = field(default_factory=LabelConfig)
-    grid_overlay: Optional[GridOverlayConfig] = field(default_factory=GridOverlayConfig)
-    canvas: Optional[CanvasConfig] = field(default_factory=CanvasConfig)
-    axes: Optional[AxesConfig] = field(default_factory=AxesConfig)
-    plugins: Optional[dict[str, Any]] = field(default_factory=dict)
+    legend: LegendConfig = field(default_factory=LegendConfig)
+    labels: LabelConfig = field(default_factory=LabelConfig)
+    grid_overlay: GridOverlayConfig = field(default_factory=GridOverlayConfig)
+    canvas: CanvasConfig = field(default_factory=CanvasConfig)
+    axes: AxesConfig = field(default_factory=AxesConfig)
+    plugins: dict[str, Any] = field(default_factory=dict)
 
 
 def apply_style_to_collection(collection: CollectionConfig, style: StylesConfig) -> None:
