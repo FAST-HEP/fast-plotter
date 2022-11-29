@@ -155,4 +155,4 @@ def create_example_config(output_file_name: str):
 
 
 if __name__ == "__main__":
-    create_example_config("docs/example_config.yaml")
+    create_example_config("docs/example_v1_config.yaml")
