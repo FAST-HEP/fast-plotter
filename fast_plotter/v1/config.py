@@ -1,4 +1,4 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, fields
 import numpy as np
 from omegaconf import OmegaConf
 from typing import Any
@@ -95,10 +95,17 @@ class StylesConfig:
 
 
 def apply_style_to_collection(collection: CollectionConfig, style: StylesConfig) -> None:
+    """Applies the style to the collection.
+        Order of precedence:
+        1. collection
+        2. style
+        3. default style
+    """
     default_config = OmegaConf.structured(StylesConfig)
+    supported_attributes = [field.name for field in fields(StylesConfig)]
     temp = None
-    for attribute in ["legend", "labels", "grid_overlay", "canvas", "plugins"]:
-        logger.debug(f"Applying style {attribute} to collection {collection}")
+    for attribute in supported_attributes:
+        logger.debug(f"Applying {attribute} style to collection {collection}")
         in_collection = hasattr(collection, attribute)
         in_style = hasattr(style, attribute)
 
