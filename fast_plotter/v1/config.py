@@ -115,10 +115,10 @@ def apply_style_to_collection(collection: CollectionConfig, style: StylesConfig)
             continue
 
         to_merge = [getattr(default_config, attribute)]
-        if in_collection:
-            to_merge.append(getattr(collection, attribute))
         if in_style:
             to_merge.append(getattr(style, attribute))
+        if in_collection:
+            to_merge.append(getattr(collection, attribute))
         temp = OmegaConf.merge(*to_merge)
 
         setattr(collection, attribute, temp)
