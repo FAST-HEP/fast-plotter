@@ -111,7 +111,7 @@ def apply_style_to_collection(collection: CollectionConfig, style: StylesConfig)
 
         if not in_collection and not in_style:
             setattr(collection, attribute, getattr(default_config, attribute))
-            return
+            continue
 
         to_merge = [getattr(default_config, attribute)]
         if in_collection:
