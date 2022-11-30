@@ -3,9 +3,11 @@ from typing import Any, Dict, List
 import uproot
 
 from .hist_collections import EfficiencyHistCollection
+from .settings import LabelSettings, LegendSettings, GridSettings, TickSettings
 
+from .config import load_config, PlotConfig
 
-def create_collection(name, config, style):
+def create_collection(name, config):
     LOOKUP = {
         "efficiency": EfficiencyHistCollection,
     }
@@ -13,8 +15,7 @@ def create_collection(name, config, style):
 #     return collection_class(**config)
     return collection_class(
         name=name,
-        title=config["title"],
-        style=style,
+        config=config,
     )
 
 
@@ -35,22 +36,19 @@ def read_histogram_file(input_file, histname):
     return hist
 
 
-def make_plots(plot_config: Dict[str, Any], input_files: List[str], output_dir: str):
+def make_plots(plot_config_file: str, input_files: List[str], output_dir: str):
     _workaround_uproot_issue38()
+
+    plot_config = load_config(plot_config_file)
     input_file = input_files[0]
 
-    plotter_version = plot_config.pop("plotter-version", "0")
     styles = plot_config.pop("styles", {})
     collections = plot_config.pop("collections", {})
-    named_styles = {}
-    for style in styles:
-        named_styles[style["name"]] = style
 
     for name, config in collections.items():
-        # TODO: needs to me safer
-        style = named_styles[config.pop("style")]
-        collection = create_collection(name, config, style)
+        collection = create_collection(name, config)
         sources = config.pop("sources")
+        colors = []
         for source in sources:
             label = source.pop("label")
             path = source.pop("path")
@@ -60,6 +58,7 @@ def make_plots(plot_config: Dict[str, Any], input_files: List[str], output_dir: 
                 numerator=hist.members["fPassedHistogram"].to_numpy()[0],
                 denominator=hist.members["fTotalHistogram"].to_numpy()[0],
             )
-
+            colors.append(source.pop("color"))
+        collection.hist_colors = colors
         collection.plot()
         collection.save(output_dir)
