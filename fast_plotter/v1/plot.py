@@ -34,64 +34,61 @@ def _auto_limits(current_limits: tuple[float, float], limits: tuple[float, float
     return limits
 
 
-def draw_legend(axis: plt.Axes, settings: LegendConfig) -> None:
+def draw_legend(axis: plt.Axes, config: LegendConfig) -> None:
     """Draw a legend on the given axis. Content must be already drawn when calling this function."""
-    if not settings.show_legend:
+    if not config.show:
         return
     handles, labels = axis.get_legend_handles_labels()
     handles = _remove_errorbars(handles)
-    axis.legend(handles, labels, title="$|\eta| < 2.4$", **settings.kwargs)
+    axis.legend(handles, labels, title="$|\eta| < 2.4$", **config.kwargs)
 
 
-def set_lables(axis: plt.Axes, labels: LabelConfig) -> None:
-    axis.set_xlabel(labels.xlabel)
-    axis.set_ylabel(labels.ylabel)
-    if labels.show_title:
-        axis.set_title(labels.title)
+def set_lables(axis: plt.Axes, config: LabelConfig) -> None:
+    axis.set_xlabel(config.xlabel, **config.kwargs)
+    axis.set_ylabel(config.ylabel, **config.kwargs)
+    if config.show_title:
+        axis.set_title(config.title)
 
 
-def draw_grid_overlay(axis: plt.Axes, grid: GridOverlayConfig) -> None:
+def draw_grid_overlay(axis: plt.Axes, config: GridOverlayConfig) -> None:
     # check if linestyle is OK
-    line_style = _replace_custom_linestyle(grid.linestyle)
-    xlimits = _auto_limits(axis.get_xlim(), grid.xlimits)
-    ylimits = _auto_limits(axis.get_ylim(), grid.ylimits)
+    line_style = _replace_custom_linestyle(config.linestyle)
+    xlimits = _auto_limits(axis.get_xlim(), config.xlimits)
+    ylimits = _auto_limits(axis.get_ylim(), config.ylimits)
     axis.vlines(
-        grid.vertical_lines,
-        color=grid.color,
+        config.vertical_lines,
+        color=config.color,
         linestyle=line_style,
-        linewidth=grid.linewidth,
+        linewidth=config.linewidth,
         ymin=ylimits[0],
         ymax=ylimits[1],
-        alpha=grid.alpha,
-        **grid.kwargs,
+        alpha=config.alpha,
+        **config.kwargs,
     )
     axis.hlines(
-        grid.horizontal_lines,
-        color=grid.color,
+        config.horizontal_lines,
+        color=config.color,
         linestyle=line_style,
         xmin=xlimits[0],
         xmax=xlimits[1],
-        linewidth=grid.linewidth,
-        alpha=grid.alpha,
-        **grid.kwargs,
+        linewidth=config.linewidth,
+        alpha=config.alpha,
+        **config.kwargs,
     )
 
 
 def modify_axes(axis: plt.Axes, config: AxesConfig) -> None:
     """Sets the axes limits, scale (e.g. log), and ticks."""
-    axis.set_xlim(config.xlimits)
-    axis.set_ylim(config.ylimits)
+    xlimits = _auto_limits(axis.get_xlim(), config.xlimits)
+    ylimits = _auto_limits(axis.get_ylim(), config.ylimits)
+    axis.set_xlim(xlimits)
+    axis.set_ylim(ylimits)
     axis.set_xscale("log" if config.xlog else "linear")
     axis.set_yscale("log" if config.ylog else "linear")
-    axis.xaxis.set_major_locator(plt.MaxNLocator(config.major_ticks))
-    axis.xaxis.set_minor_locator(plt.MaxNLocator(config.minor_ticks))
-    axis.yaxis.set_major_locator(plt.MaxNLocator(config.major_ticks))
-    axis.yaxis.set_minor_locator(plt.MaxNLocator(config.minor_ticks))
+    axis.xaxis.set_major_locator(plt.MaxNLocator(config.xmajor_ticks))
+    axis.xaxis.set_minor_locator(plt.MaxNLocator(config.xminor_ticks))
+    axis.yaxis.set_major_locator(plt.MaxNLocator(config.ymajor_ticks))
+    axis.yaxis.set_minor_locator(plt.MaxNLocator(config.yminor_ticks))
     axis.tick_params(which="major", length=10, width=1, direction="in")
     axis.tick_params(which="minor", length=5, width=1, direction="in")
-
-# def set_ticks(axis: plt.Axes, ticks: TickSettings) -> None:
-#     pass
-
-# def plot_efficiency(collection: EfficiencyCollection, settings: PlotSettings) -> None:
-#     pass
+    axis.tick_params(which="both", labelsize=14)
