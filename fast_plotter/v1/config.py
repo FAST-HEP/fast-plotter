@@ -4,6 +4,7 @@ from omegaconf import OmegaConf
 from typing import Any
 
 from fasthep_logging import get_logger
+from fast_plotter.v1.plugins._mplhep import inspect_plugin_config as mplhep_inspect_plugin_config
 
 logger = get_logger()
 
@@ -123,6 +124,15 @@ def apply_style_to_collection(collection: CollectionConfig, style: StylesConfig)
         setattr(collection, attribute, temp)
 
 
+
+def inspect_plugins(collection: CollectionConfig) -> None:
+    """Inspects the plugins of a collection.
+    """
+    for name, plugin in collection.plugins.items():
+        if name == "mplhep":
+            plugin = mplhep_inspect_plugin_config(plugin)
+
+
 @dataclass
 class PlotConfig:
     plotconfig_version: str = field(default="1")
@@ -137,6 +147,7 @@ def load_config(config_file_name: str) -> PlotConfig:
     for name, collection in plot_config.collections.items():
         style = plot_config.styles[collection.style]
         apply_style_to_collection(collection, style)
+        inspect_plugins(collection)
 
     return plot_config
 
@@ -162,4 +173,5 @@ def create_example_config(output_file_name: str):
 
 
 if __name__ == "__main__":
+    logger.info("Creating example config")
     create_example_config("docs/example_v1_config.yaml")
