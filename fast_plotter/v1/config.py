@@ -151,7 +151,7 @@ def create_example_config(output_file_name: str):
                 "xerr": True,
             },
             "mplhep": {
-                "style": "CMS",
+                "experiment": "CMS",
             },
         },
     )
