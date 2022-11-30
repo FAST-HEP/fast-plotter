@@ -7,7 +7,7 @@ from .settings import LabelSettings, LegendSettings, GridSettings, TickSettings
 
 from .config import load_config, PlotConfig
 
-def create_collection(name, config, style):
+def create_collection(name, config):
     LOOKUP = {
         "efficiency": EfficiencyHistCollection,
     }
@@ -15,8 +15,7 @@ def create_collection(name, config, style):
 #     return collection_class(**config)
     return collection_class(
         name=name,
-        title=config["title"],
-        style=style,
+        config=config,
     )
 
 
@@ -47,9 +46,7 @@ def make_plots(plot_config_file: str, input_files: List[str], output_dir: str):
     collections = plot_config.pop("collections", {})
 
     for name, config in collections.items():
-        # TODO: needs to me safer
-        style = styles[config.pop("style")]
-        collection = create_collection(name, config, style)
+        collection = create_collection(name, config)
         sources = config.pop("sources")
         colors = []
         for source in sources:
