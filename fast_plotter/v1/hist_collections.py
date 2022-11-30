@@ -1,28 +1,22 @@
-import matplotlib.pyplot as plt
-from matplotlib.lines import Line2D
+from .plugins._mplhep import set_experiment_style, draw_experiment_label, histplot
+from .plugins._matplotlib import savefig, setup_matplotlib, subplots, plt
+from .plot import draw_legend, set_lables, draw_grid_overlay, modify_axes
 from dataclasses import field
 import os
 import numpy as np
 from typing import Any
 
 from hist.intervals import ratio_uncertainty
-import mplhep as hep
-import matplotlib
-matplotlib.use("Agg")
 
-from .plot import draw_legend, set_lables, set_grid, set_ticks
-from .settings import LabelSettings, LegendSettings, GridSettings, TickSettings
-from .plugins._matplotlib import savefig, setup_matplotlib
 
 class EfficiencyHistCollection():
     hists: list[Any] = field(default_factory=list)
     hist_colors: list[str] = field(default_factory=list)
     histtype = "errorbar"
 
-    def __init__(self, name, title, style):
+    def __init__(self, name, config):
         self.name = name
-        self.title = title
-        self.style = style
+        self.config = config
         self.hists = []
         self.hist_colors = []
 
@@ -30,15 +24,23 @@ class EfficiencyHistCollection():
         self.hists.append(Efficiency(name, numerator, denominator, **kwargs))
 
     def plot(self, **kwargs):
+        """Plot the histograms in the collection.
+        Compiles collection specific settings and passes them to the plotter.
+        """
         setup_matplotlib()
-        fig, ax = plt.subplots()
-        hep.style.use("CMS")
-        hep.cms.label(data=False, fontsize=14)
+        fig, ax = subplots()
+
+        experiment = self.config.plugins["mplhep"]["experiment"]
+        set_experiment_style(experiment)
+        if "label_kwargs" in self.config.plugins["mplhep"]:
+            draw_experiment_label(experiment, **self.config.plugins["mplhep"]["label_kwargs"])
+        else:
+            draw_experiment_label(experiment, fontsize=14, data=False, rlabel="13 TeV")
 
         plots = [hist.eff for hist in self.hists]
         labels = [hist.name for hist in self.hists]
         yerrs = [hist.eff_err for hist in self.hists]
-        hep.histplot(
+        histplot(
             plots,
             markersize=8,
             stack=False,
@@ -50,33 +52,12 @@ class EfficiencyHistCollection():
             color=self.hist_colors,
             **kwargs,
         )
-        legend_settings = LegendSettings()
-        draw_legend(ax, legend_settings)
-        label_settings = LabelSettings(
-            x_label="p_{T} [GeV]",
-            y_label="Efficiency",
-            title=self.title,
-        )
-        set_lables(ax, label_settings)
-        # plt.xlabel("$p_{T}$ [GeV]")
-        # plt.ylabel("Efficiency")
-        # ax.tick_params(which='major', length=10, width=1, direction='in')
-        # ax.tick_params(which='minor', length=5, width=1, direction='in')
-        #xmin, xmax = ax.get_xlim()
-        xmin, xmax = 0, 40
-        ymin, ymax = 0, 1.1
+        draw_legend(ax, self.config.legend)
+        set_lables(ax, self.config.labels)
+        modify_axes(ax, self.config.axes)
 
-        plt.xlim(xmin, xmax)
-        plt.ylim(ymin, ymax)
-        grid_settings = GridSettings(
-            vertical_lines=[10, 20, 30, 40],
-            horizontal_lines=[0.25, 0.5, 0.75, 0.95, 1],
-            xlimits=(xmin, xmax),
-            ylimits=(ymin, 1),
-        )
-        set_grid(ax, grid_settings)
-        plt.tight_layout()
-
+        draw_grid_overlay(ax, self.config.grid_overlay)
+        # plt.tight_layout()
 
     def save(self, output_dir):
         output_file = os.path.join(output_dir, f"{self.name}.png")
@@ -118,7 +99,7 @@ class Efficiency:
         return self._eff_err
 
     def plot(self, **kwargs):
-        hep.histplot(self.eff, yerr=self.eff_err, **kwargs)
+        histplot(self.eff, yerr=self.eff_err, **kwargs)
 
     def __repr__(self):
         return f"EfficiencyHist(num={self.num}, den={self.den})"
