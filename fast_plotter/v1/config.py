@@ -65,8 +65,10 @@ class AxesConfig:
     ylog: bool = field(default=False)
     xlimits: tuple[float, float] = field(default=(-np.inf, np.inf))
     ylimits: tuple[float, float] = field(default=(-np.inf, np.inf))
-    major_ticks: int = field(default=5)
-    minor_ticks: int = field(default=5)
+    xmajor_ticks: int = field(default=5)
+    ymajor_ticks: int = field(default=5)
+    xminor_ticks: int = field(default=5)
+    yminor_ticks: int = field(default=5)
     kwargs: dict[str, Any] = field(default_factory=dict)
 
 
